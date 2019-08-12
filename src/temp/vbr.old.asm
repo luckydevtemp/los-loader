@@ -1,9 +1,4 @@
 
-
-
-
-
-
 ;===========================================================================
 ;
 ; ############################ Definições ############################
@@ -15,87 +10,14 @@
   STAGE1_BASE     equ STAGE1_SEG * 0X10
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ;===========================================================================
 ;
 ; ############################ Procedimentos ############################
 ;
 ;===========================================================================
 
-
-
-
-
-
 ;  %include "initdiskinfo-inc.asm"
-
-
-
-
-
-  %include "writewhex-inc.asm"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+%include "writewhex-inc.asm"
 
 
 ;===========================================================================
@@ -106,20 +28,6 @@
 
   BOOT_MSG          db  'B', 10, 13, 0
   ERROR_MSG         db  'E', 10, 13, 0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ;  NEW_LINE          db  10, 13, 0
 
@@ -146,80 +54,6 @@ SECTION .bss
   current_cylinder    resw  1
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ;===========================================================================
 ;
 ; ############################ Definições ############################
@@ -239,51 +73,6 @@ SECTION .bss
 
   DIRENTRY_SIZE   equ 32      ; Tamanho de uma entrada de diretorio
   FILENAME_SIZE   equ 11      ; Tamanho dos nomes de arquivos
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ;===========================================================================
@@ -343,42 +132,6 @@ SECTION .bss
 ; ############################ Procedimentos ############################
 ;
 ;===========================================================================
-
-
-;===========================================================================
-; ReadFatEntry
-; --------------------------------------------------------------------------
-; Le a entrada N da FAT
-;===========================================================================
-
-ReadFatEntry:
-  push  bx
-
-  xor   dx, dx
-  mov   cx, ax
-
-  shr   ax, 1
-  mov   bx, 3
-  mul   bx
-
-  add   ax, FAT_BASE
-  mov   bx, ax
-
-  mov   ax, [bx]
-  mov   dx, [bx + 2]
-
-  and   cx, 1
-  jz    .0
-
-  and   dx, 0x00FF
-  mov   bx, 0x1000
-  div   bx
-
-.0:
-  and   ax, 0xFFF
-
-  pop   bx
-ret
 
 
 
@@ -495,36 +248,6 @@ WelcomeEBS:
 
   ; # Localizar ARQUIVO #
 
-;===========================================================================
-; SearchFile
-; --------------------------------------------------------------------------
-; Localiza o stage2 na FAT
-;===========================================================================
-
-_SearchFile:
-  mov   dx, [BPB.RootEntries]
-  mov   bx, root_base
-
-  mov   cx, FILENAME_SIZE
-  mov   si, FileName
-
-.loop:
-  mov   di, bx
-
-  push  cx
-  push  si
-
-  repz  cmpsb
-  je    .FoundedFile
-
-  pop   si
-  pop   cx
-
-  add   bx, DIRENTRY_SIZE
-  dec   dx
-  jnz   .loop
-
-  jmp   Error
 
 .FoundedFile:
   ; Verifica tipo do arquivo
@@ -889,29 +612,6 @@ _start:
   jae   Error
 
 
-;===========================================================================
-; SearchFile
-; --------------------------------------------------------------------------
-; Localiza o stage2 na FAT
-;===========================================================================
-
-_SearchFile:
-  mov   dx, [BPB.RootEntries]
-  pop   bx                      ; Memptr
-
-.loop:
-  mov   di, bx
-  mov   cx, FILENAME_SIZE
-  mov   si, FileName
-
-  repz  cmpsb
-  je    .FoundedFile
-
-  add   bx, DIRENTRY_SIZE
-  dec   dx
-  jnz   .loop
-
-  jmp   Error
 
 .FoundedFile:
   ; Verifica tipo do arquivo

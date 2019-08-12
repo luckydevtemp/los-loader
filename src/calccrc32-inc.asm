@@ -38,7 +38,6 @@ CalcCRC32:
   or    bx, 0x8000
 
 .0:
-
   xor   dx, 0xEDB8
   xor   bx, 0x8320
 
