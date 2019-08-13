@@ -89,6 +89,9 @@
     %error "O tamanho do STAGE_1 não pode ultrapassar UM segmento de memória!"
   %endif
 
+  ; Estrutura de informações de disco
+  %include "diskinfo-inc.asm"
+
   ; Assinaturas usadas nos estágios de boot
   %include "losboot_sig-inc.asm"
 
@@ -397,7 +400,6 @@ jmp   STAGE1_SEG:0
 ;===============================================================================
 
   %include "writeastr-inc.asm"
-  %include "diskinfo-inc.asm"
   %include "resetdisk-inc.asm"
   %include "lba2chs-inc.asm"
   %include "readlba-inc.asm"

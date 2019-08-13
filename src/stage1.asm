@@ -49,7 +49,22 @@
     CRC_32          equ 0
   %endif
 
-  EBDA_SEG_VETOR  equ 0x040E
+  EBDA_SEG_VETOR    equ 0x040E
+
+  STACK_SIZE        equ 512
+
+  SEGSIZE_PH        equ 0x1000
+
+  STAGE2_BASE       equ 0x1000      ; 4 kB
+
+  ; Estrutura de informações de disco
+  %include "diskinfo-inc.asm"
+
+  ; Assinaturas usadas nos estágios de boot
+  %include "losboot_sig-inc.asm"
+
+  FREEMEM_START     equ (ShareData.End & ~0xF) + 0x10
+
 
 
 ;===============================================================================
@@ -58,13 +73,16 @@
 ;
 ;===============================================================================
 ABSOLUTE  0x0600
-  ; Aqui ficam as variaveis a serem passados ao stage2
-  PhysicalDriveNumber   resb  1
-  CPULevel              resb  1
-  LowerMemory           resd  1
-  ; Aqui ficam as variaveis temporarias que nao podem ficar na secao principal
-  CRC32Sum              resd  1
 
+ShareData:
+  ; Aqui ficam as variaveis a serem passados ao stage2
+  .PhysicalDriveNumber   resb  1
+  .CPULevel              resb  1
+  .LowerMemory           resd  1
+  ; Aqui ficam as variaveis temporarias que nao podem ficar na secao principal
+  .CRC32Sum              resd  1
+
+  .End:
 
 ;===============================================================================
 ;
@@ -105,19 +123,25 @@ Main:
   xor   ax, ax
   mov   es, ax
 
+  ; A pilha fica onde esta por enquanto
+
   mov   ax, BOOT_MSG
   call  WriteAStr
 
   ; Copia as informacoes do dispositivo de boot para um lugar na memoria, liberando registradores
-  mov   [es:PhysicalDriveNumber], dl
+  mov   [es:ShareData.PhysicalDriveNumber], dl
 
   ; Calcula CRC
+
+  mov   ax, CALC_CRC32_MSG
+  call  WriteAStr
+
   ; Para o calculo dar certo, o campo SelfCRC32 tem que esta zerado, por isso ele é copiado para outro lugar
   mov   ax, [InfoTable.SelfCRC32]
   mov   dx, [InfoTable.SelfCRC32 + 2]
 
-  mov   [es:CRC32Sum], ax
-  mov   [es:CRC32Sum + 2], dx
+  mov   [es:ShareData.CRC32Sum], ax
+  mov   [es:ShareData.CRC32Sum + 2], dx
 
   xor   ax, ax
   mov   dx, ax
@@ -137,13 +161,20 @@ Main:
 
   pop   es
 
-  xor   ax, [es:CRC32Sum]
-  jnz   ErrorCRCStage1
+  xor   ax, [es:ShareData.CRC32Sum]
+  jnz   .0
 
-  xor   dx, [es:CRC32Sum + 2]
-  jnz   ErrorCRCStage1
+  xor   dx, [es:ShareData.CRC32Sum + 2]
+  jz   .1
 
-  mov   ax, STAGE1_CRCOK_MSG
+.0:
+  mov   ax, FAIL_MSG
+  call  WriteAStr
+
+  jmp   Abort
+
+.1:
+  mov   ax, OK_MSG
   call  WriteAStr
 
   call  DetectCPULevel
@@ -151,34 +182,34 @@ Main:
 
   cmp   al, 3                           ; ve se eh um 80386 ou superior
   jb    ErrorCPU                        ; se nao for termina
-  mov   [es:CPULevel], al
+  mov   [es:ShareData.CPULevel], al
 
-  ; Temos um 386, pelo menos
+  ; ### Temos pelo menos um 386 ###
   [CPU 386]
 
   ; Detectar a memoria baixa (<1M)
   xor   ax, ax
+  mov   fs, ax                          ; utilizando fs para acessar o segmento 0, liberando es
   mov   cx, ax
 
-  int   0x12
+  int   0x12                            ; ax = kB
 
-  mov   cl, 6
-  shl   ax, cl                          ; paragrafos total
+  shl   ax, 6                           ; paragrafos total
 
-  mov   cx, [es:EBDA_SEG_VETOR]         ; paragrafo ebda
+  mov   cx, [fs:EBDA_SEG_VETOR]         ; paragrafo ebda
 
   cmp   ax, cx
-  jbe   .0
+  jbe   .2
 
   mov   ax, cx
 
-.0:
+.2:
   ; ax contem o ultimo paragrafo da memoria
 
   xor   edx, edx
   mov   dx, ax
   shl   edx, 4
-  mov   [es:LowerMemory], edx       ; Quantidade de memoria em bytes
+  mov   [fs:ShareData.LowerMemory], edx       ; Quantidade de memoria em bytes
 
   ; Imprime a quantidade de memoria
   mov   ax, LOWERMEMORY_MSG
@@ -190,6 +221,10 @@ Main:
   mov   ax, NEWLINE
   call  WriteAStr
 
+  ; Copia imagem
+  mov   ax, COPY_MSG
+  call  WriteAStr
+
   ; Calcula o tamanho total da imagem
   xor   ecx, ecx
   mov   cx, (End - Start)
@@ -197,36 +232,114 @@ Main:
   ; Calcula inicio do destino
   mov   eax, edx
   sub   eax, ecx
-
-  shr   eax, 4
-
-  push  es
+  shr   eax, 4                      ; calcula segmento
   mov   es, ax
-  mov   si, End
-  mov   di, End
+
+  mov   si, (End - 1)
+  mov   di, si
 
   std
   rep   movsb
 
+  ; Confere o CRC
   xor   ax, ax
   mov   dx, ax
 
   mov   si, Start                       ; ES:SI = endereco para o bloco
-  mov   cx, End_Img - Start
+  mov   cx, (End_Img - Start)
 
   call  CalcCRC32
 
-  pop   es
+  xor   ax, [fs:ShareData.CRC32Sum]
+  jnz   .3
 
-  xor   ax, [es:CRC32Sum]
-  jnz   ErrorCRCStage1
+  xor   dx, [fs:ShareData.CRC32Sum + 2]
+  jz    .4
 
-  xor   dx, [es:CRC32Sum + 2]
-  jnz   ErrorCRCStage1
-
-  mov   ax, STAGE1_CRCOK_MSG
+.3:
+  mov   ax, FAIL_MSG
   call  WriteAStr
 
+  jmp   Abort
+
+.4:
+  mov   ax, OK_MSG
+  call  WriteAStr
+
+  push  es
+  push  Main_High
+ret
+
+
+
+;===============================================================================
+; Main_High
+; ------------------------------------------------------------------------------
+; Funcao principal no topo da memoria
+;===============================================================================
+
+Main_High:
+  ; Ajusta segmento de dados
+  push  cs
+  pop   ds
+
+  ; Ajusta a pilha logo abaixo desse segmento
+  mov   ax, cs
+  sub   ax, SEGSIZE_PH
+  mov   ss, ax
+
+  xor   ax, ax
+  sub   ax, 4
+  mov   sp, ax
+  mov   bp, ax
+
+  ; calcula o espaco livre para o Stage_2
+  xor   eax, eax
+
+  mov   ax, cs
+  shl   eax, 4
+  sub   eax, STACK_SIZE
+
+  mov   [FreeMemory], eax
+
+  ; Verifica se disquete
+  xor   ax, ax
+  mov   al, [fs:ShareData.PhysicalDriveNumber]
+
+  mov   dx, ax
+  and   al, 0x80
+  jz    .0
+
+  mov   ax, ERROR_HD
+  call  WriteAStr
+
+  jmp   Abort
+
+.0:
+  ; Inicializar o disco
+  mov   ax, dx
+  mov   bx, DisckInfo
+
+  call  InitDiskInfo
+  jnc   .1
+
+  mov   ax, ERROR_DISK_INIT
+  call  WriteAStr
+
+  jmp   Abort
+
+.1:
+  ; Carregar VBR para obter informacoes do FS (fara diferenca quando for HD)
+  xor   ax, ax
+  mov   dx, ax
+
+  mov   cx, ax
+  inc   cx
+
+  mov   si, DisckInfo
+
+  mov   es, ax
+  mov   di, FREEMEM_START
 
 
 
@@ -256,6 +369,8 @@ Main:
 
 
 
+
+Test:
 
 
   mov   ax, TEST_MSG
@@ -275,6 +390,9 @@ Main:
   %include "writeastr-inc.asm"
   %include "calccrc32-inc.asm"
   %include "deteccpu-inc.asm"
+  %include "initdiskinfo-inc.asm"
+
+
 
   %include "writewhex-inc.asm"
 
@@ -286,19 +404,20 @@ Main:
 
 Halt:
   hlt
-  jmp   Halt
+jmp   Halt
 
 
 ;===============================================================================
-; ErrorCRCStage1
+; Abort
 ; ------------------------------------------------------------------------------
 ; Exibe a mensagem de erro e interrompe
 ;===============================================================================
 
-ErrorCRCStage1:
-  mov   ax, ERROR_CRCSTAGE1_MSG
+Abort:
+  mov   ax, ABORT_MSG
   call  WriteAStr
-  jmp   Halt
+jmp   Halt
+
 
 
 ;===============================================================================
@@ -310,7 +429,7 @@ ErrorCRCStage1:
 ErrorCPU:
   mov   ax, ERROR_CPULEVEL_MSG
   call  WriteAStr
-jmp  Halt
+jmp Abort
 
 
 
@@ -394,10 +513,16 @@ ret
   NEWLINE               db 10, 13, 0
 
   BOOT_MSG              db  10, '* STAGE_1:', 10, 13, 0
-  STAGE1_CRCOK_MSG      db '  Integridade do Stage_1 OK', 10, 13, 0
+  CALC_CRC32_MSG        db '  Calculando Integridade do Stage_1...', 0
+  COPY_MSG              db '  Copiando Stage_1 para o topo da memoria...', 0
+
+  FAIL_MSG              db ' [ Falha ]', 10, 13, 0
+  OK_MSG                db ' [ OK ]', 10, 13, 0
+
+  ABORT_MSG             db 10, '  ABORTANDO!', 0
 
   ERROR_CRCSTAGE1_MSG   db '  Soma de verificacao do Stage_1 nao confere. ABORTANDO!', 0
-  ERROR_CPULEVEL_MSG    db '  O sistema necessita de uma CPU 80386 ou superior. ABORTANDO!', 0
+  ERROR_CPULEVEL_MSG    db '  O sistema necessita de uma CPU 80386 ou superior', 10, 13, 0
 
   CPU8086_MSG           db '  CPU 8086 detectada', 0
   CPU286_MSG            db '  CPU 80286 detectada', 0
@@ -406,6 +531,9 @@ ret
   CPU586_MSG            db '  CPU 80586 ou superior detectada', 0
 
   LOWERMEMORY_MSG       db '  Memoria inferior detectada (bytes): ',0
+
+  ERROR_HD              db '  O boot por HD ainda nao eh suportado!', 10, 13, 0
+  ERROR_DISK_INIT       db '  Nao foi possivel inicializar o disco de boot!', 10, 13, 0
 
 
 
@@ -424,11 +552,11 @@ BSS:
 ; ------------------------------------------------------------------------------
 ; A assinatura deve ser alinhada com setores
 
-  times ((0x200 * STAGE1_SECTORS) - 8) - ($ - $$) db 0
-  db 'LOS-BOOT'
+  times ((0x200 * STAGE1_SECTORS) - STAGE1_SIG_SIZE) - ($ - $$) db 0
+  db STAGE1_SIG_VALUE
 ;===============================================================================
 
-End_Img
+End_Img:
 
 
 ;===============================================================================
@@ -441,7 +569,8 @@ End_Img
 ABSOLUTE BSS
 ; ### Variaveis criadas pelo bootloader ###
 
-  Teste   resb 2
+  FreeMemory    resd  1
+  DisckInfo     resb  DISKINFOSIZE
 
 BSS_End:
 
