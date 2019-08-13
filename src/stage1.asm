@@ -180,7 +180,7 @@ Main:
   shl   edx, 4
   mov   [es:LowerMemory], edx       ; Quantidade de memoria em bytes
 
-  ;Imprime a quantidade de memoria
+  ; Imprime a quantidade de memoria
   mov   ax, LOWERMEMORY_MSG
   call  WriteAStr
 
@@ -189,6 +189,55 @@ Main:
 
   mov   ax, NEWLINE
   call  WriteAStr
+
+  ; Calcula o tamanho total da imagem
+  xor   ecx, ecx
+  mov   cx, (End - Start)
+
+  ; Calcula inicio do destino
+  mov   eax, edx
+  sub   eax, ecx
+
+  shr   eax, 4
+
+  push  es
+  mov   es, ax
+  mov   si, End
+  mov   di, End
+
+  std
+  rep   movsb
+
+  xor   ax, ax
+  mov   dx, ax
+
+  mov   si, Start                       ; ES:SI = endereco para o bloco
+  mov   cx, End_Img - Start
+
+  call  CalcCRC32
+
+  pop   es
+
+  xor   ax, [es:CRC32Sum]
+  jnz   ErrorCRCStage1
+
+  xor   dx, [es:CRC32Sum + 2]
+  jnz   ErrorCRCStage1
+
+  mov   ax, STAGE1_CRCOK_MSG
+  call  WriteAStr
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -227,6 +276,7 @@ Main:
   %include "calccrc32-inc.asm"
   %include "deteccpu-inc.asm"
 
+  %include "writewhex-inc.asm"
 
 ;===============================================================================
 ; Halt

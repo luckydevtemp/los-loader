@@ -19,6 +19,8 @@ CalcCRC32:
   push  es
   pop   ds
 
+  cld
+
 .loop1:
   lodsb
 
