@@ -65,6 +65,9 @@
 
   FREEMEM_START     equ (ShareData.End & ~0xF) + 0x10
 
+  ;   Tamanho do setor é usado para calcular o posicionamento memória.
+  ; Por enquanto, somente setores de 512 bytes são suportados.
+  SECTOR_SIZE     equ 512               ; valor fixo, utilizado p/ evitar erros
 
 
 ;===============================================================================
@@ -341,7 +344,7 @@ Main_High:
   mov   es, ax
   mov   di, FREEMEM_START
 
-
+  call  ReadLBA
 
 
 
@@ -391,7 +394,10 @@ Test:
   %include "calccrc32-inc.asm"
   %include "deteccpu-inc.asm"
   %include "initdiskinfo-inc.asm"
-
+  %include "readlba-inc.asm"
+  %include "lba2chs-inc.asm"
+  %include "readchs-inc.asm"
+  %include "resetdisk-inc.asm"
 
 
   %include "writewhex-inc.asm"
