@@ -187,7 +187,9 @@ Main:
   jb    ErrorCPU                        ; se nao for termina
   mov   [es:ShareData.CPULevel], al
 
-  ; ### Temos pelo menos um 386 ###
+; ------------------------------------------------------------------------------
+; ### Temos pelo menos um 386 ###
+; ------------------------------------------------------------------------------
   [CPU 386]
 
   ; Detectar a memoria baixa (<1M)
@@ -241,6 +243,12 @@ Main:
   mov   si, (End - 1)
   mov   di, si
 
+push  ax
+mov   ax, si
+call  WriteWordHex
+pop   ax
+
+
   std
   rep   movsb
 
@@ -287,14 +295,41 @@ Main_High:
   pop   ds
 
   ; Ajusta a pilha logo abaixo desse segmento
+  cli
   mov   ax, cs
-  sub   ax, SEGSIZE_PH
-  mov   ss, ax
+;  sub   ax, SEGSIZE_PH
+;  mov   ss, ax
 
-  xor   ax, ax
-  sub   ax, 4
-  mov   sp, ax
-  mov   bp, ax
+;  xor   ax, ax
+;  sub   ax, 4
+;  mov   sp, ax
+;  mov   bp, ax
+  sti
+
+  call  WriteWordHex
+
+  push  ax
+  push  bx
+  push  cx
+  push  dx
+  push  es
+
+  mov   ax, 0x0201
+  mov   cx, 0x0001
+  mov   dx, 0x0000
+
+  mov   bx, 0x0000
+  mov   es, bx
+
+  mov   bx, 0x0700
+
+;  int   0x13
+
+  pop   es
+  pop   dx
+  pop   cx
+  pop   bx
+  pop   ax
 
   ; calcula o espaco livre para o Stage_2
   xor   eax, eax
@@ -319,9 +354,12 @@ Main_High:
   jmp   Abort
 
 .0:
+  mov   ax, DISKINIT_MSG
+  call  WriteAStr
+
   ; Inicializar o disco
   mov   ax, dx
-  mov   bx, DisckInfo
+  mov   bx, DiskInfo
 
   call  InitDiskInfo
   jnc   .1
@@ -332,6 +370,14 @@ Main_High:
   jmp   Abort
 
 .1:
+  mov   ax, DiskInfo
+  mov   si, ax
+
+  call  PrintDriveInfo
+
+  mov   ax, LOADVBR_MSG
+  call  WriteAStr
+
   ; Carregar VBR para obter informacoes do FS (fara diferenca quando for HD)
   xor   ax, ax
   mov   dx, ax
@@ -339,12 +385,48 @@ Main_High:
   mov   cx, ax
   inc   cx
 
-  mov   si, DisckInfo
+  mov   si, DiskInfo
 
   mov   es, ax
   mov   di, FREEMEM_START
 
-  call  ReadLBA
+
+  mov   ax, 0x0201
+  mov   cx, 0x0001
+  mov   dx, 0x0000
+
+  mov   bx, 0x0000
+  mov   es, bx
+
+  mov   bx, 0x8000
+
+;  int   0x13
+
+;  call  WriteWordHex
+
+  xor   dx, dx
+  mov   ax, dx
+  inc   ax
+
+  mov   cx, ax
+  mov   bx, di
+
+
+;  call  ReadCHS2
+
+
+
+;  call  ReadLBA
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -398,7 +480,7 @@ Test:
   %include "lba2chs-inc.asm"
   %include "readchs-inc.asm"
   %include "resetdisk-inc.asm"
-
+  %include "printcputype-inc.asm"
 
   %include "writewhex-inc.asm"
 
@@ -419,6 +501,7 @@ jmp   Halt
 ; Exibe a mensagem de erro e interrompe
 ;===============================================================================
 
+; modificar aqui para usar errorno
 Abort:
   mov   ax, ABORT_MSG
   call  WriteAStr
@@ -443,57 +526,95 @@ jmp Abort
 
 
 
+ReadCHS2:
+  mov   byte [si + DiskInfoStruct.ErrorCount], 0
 
-;===============================================================================
-; PrintCPUType
-; ------------------------------------------------------------------------------
-; Exibe o tipo de CPU
-;===============================================================================
+  push  cx                    ; salva para depois  (Q)
 
-PrintCPUType:
-  push  ax
+  mov   cl, 6
+  shl   dh, cl
+  xchg  dh, dl
 
-  cmp   ax, 5
-  jae   .5
+  or    dl, al
+  mov   cx, dx
 
-  cmp   ax, 4
-  jae   .4
+  mov   dh, ah
+  mov   dl, [si + DiskInfoStruct.DriveNumber]
 
-  cmp   ax, 3
-  jae   .3
+  pop   ax                    ; Q
 
-  cmp   ax, 2
-  jae   .2
+  cmp   ax, 128
+  jbe   .1
 
-  mov   ax, CPU8086_MSG
-  jmp   .print
+  mov   al, 128
+
+.1:
+  mov   ah, 0x02              ; funcao da BIOS
 
 .2:
-  mov   ax, CPU286_MSG
-  jmp   .print
+  push  ax
 
-.3:
-  mov   ax, CPU386_MSG
-  jmp   .print
+  push  ax
+  mov   al, [si + DiskInfoStruct.DriveNumber]
+  call  ResetDisk
+  pop   ax
 
-.4:
-  mov   ax, CPU486_MSG
-  jmp   .print
+  int   0x13
 
-.5:
-  mov   ax, CPU586_MSG
+  call WriteWordHex
 
-.print:
-  call  WriteAStr
+  test  al, al
+  jnz   .3
 
-  mov   ax, NEWLINE
-  call  WriteAStr
+  ; Verifica quantidade de erros
+  inc   byte [si + DiskInfoStruct.ErrorCount]
+  cmp   byte [si + DiskInfoStruct.ErrorCount], MAXREADERROR
+  ja    .error
+
+  mov   al, [si + DiskInfoStruct.DriveNumber]
+  call  ResetDisk
+  jc    .error
 
   pop   ax
+  jmp   .2
+
+.3:
+  pop   cx                    ; descarta pilha
+  xor   ah, ah                ; AL retorna setores lidos
+ret
+
+.error:
+  pop   cx                    ; descarta pilha
+  xor   ax, ax
+  stc
 ret
 
 
 
+;===========================================================================
+; Procedimento para leitura via int 0x13
+; O buffer está em ES:DI
+;
+; A INT 0x13 usa os seguintes parametros:
+;
+;   AH = 02
+;
+;   AL = number of sectors to read  (1-128 dec.)
+;   CH = track/cylinder number  (0-1023 dec., see below)
+;
+;   CL = sector number  (1-17 dec.)
+;
+;   DH = head number  (0-15 dec.)
+;
+;   DL = drive number (0=A:, 1=2nd floppy, 80h=drive 0, 81h=drive 1)
+;   ES:BX = pointer to buffer
+;
+; on return:
+;   AH = status  (see INT 13,STATUS)
+;   AL = number of sectors read
+;   CF = 0 if successful
+;      = 1 if error
+;===========================================================================
 
 
 
@@ -507,6 +628,24 @@ ret
 [CPU 386]
 
   %include "writeuint32-inc.asm"
+  %include "printdriveinfo-inc.asm"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;  call  WriteWordHex
+
 
 
 
@@ -540,6 +679,32 @@ ret
 
   ERROR_HD              db '  O boot por HD ainda nao eh suportado!', 10, 13, 0
   ERROR_DISK_INIT       db '  Nao foi possivel inicializar o disco de boot!', 10, 13, 0
+
+  DISKINIT_MSG          db '  Incializando disco:', 10, 13, 0
+
+  FDOTHER_MSG           db ' (Outro...)', 10, 13, 0
+  FD1_MSG               db ' (5.25 - 360kB)', 10, 13, 0
+  FD2_MSG               db ' (5.25 - 1,2MB)', 10, 13, 0
+  FD3_MSG               db ' (3.5 - 720kB)', 10, 13, 0
+  FD4_MSG               db ' (3.5 - 1,44MB)', 10, 13, 0
+
+  CHS_MSG               db '  - CHS: ', 0
+  LBA_MSG               db 10, 13, '  - LBA: ', 0
+  SLASH_MSG             db '/', 0
+
+  ERROR_CALC_LBA        db 10, 13, 'Houve um erro no calculo do LBA', 0
+
+  LOADVBR_MSG           db '  Carregando particao de boot', 10, 13, 0
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -576,7 +741,7 @@ ABSOLUTE BSS
 ; ### Variaveis criadas pelo bootloader ###
 
   FreeMemory    resd  1
-  DisckInfo     resb  DISKINFOSIZE
+  DiskInfo      resb  DISKINFOSIZE
 
 BSS_End:
 

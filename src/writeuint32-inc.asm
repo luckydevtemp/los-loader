@@ -10,7 +10,7 @@ WriteUInt32:
 
   mov   di, sp
   dec   di
-  mov   byte [di], 0
+  mov   byte [ss:di], 0
 
   xor   ecx, ecx
   mov   cl, 10
