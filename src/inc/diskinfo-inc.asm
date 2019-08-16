@@ -47,7 +47,19 @@ struc DiskInfoStruct
   ; b[0..6] : id
   .DriveNumber:   resb  1
 
-  ; Define o tipo de floppy
+  ; Este campo informa sobre o tipo de midia usada. A tabela seguinte lista
+  ; varios valores de descritores de midia reconhecidos e suas midias associadas.
+  ; Note que este campo pode estar associado com mais que uma capacidade de disco.
+  ;   Byte   Capacity   Media Size and Type
+  ;   F0     2.88 MB    3.5-inch, 2-sided, 36-sector
+  ;   F0     1.44 MB    3.5-inch, 2-sided, 18-sector
+  ;   F9     720 KB     3.5-inch, 2-sided, 9-sector
+  ;   F9     1.2 MB     5.25-inch, 2-sided, 15-sector
+  ;   FD     360 KB     5.25-inch, 2-sided, 9-sector
+  ;   FF     320 KB     5.25-inch, 2-sided, 8-sector
+  ;   FC     180 KB     5.25-inch, 1-sided, 9-sector
+  ;   FE     160 KB     5.25-inch, 1-sided, 8-sector
+  ;   F8     -----      Fixed disk
   .DriveType:     resb  1
 
   ; Cylinders b[0..15]

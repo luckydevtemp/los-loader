@@ -253,7 +253,7 @@ BPB:
 
   ; ID:
   ; Este campo e um numero de serie randomico associado ao volume durante a
-  ; formatacao para ajudaer a distinguir um disco de outro.
+  ; formatacao para ajudar a distinguir um disco de outro.
   .ID:
     dd  0x0000_0000                     ; VolumeID (Ramdom)
 

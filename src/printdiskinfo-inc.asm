@@ -1,4 +1,4 @@
-PrintDriveInfo:
+PrintDiskInfo:
   push  bx
 
   push  bp

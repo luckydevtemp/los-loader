@@ -63,11 +63,18 @@
   ; Assinaturas usadas nos estágios de boot
   %include "losboot_sig-inc.asm"
 
+  ; Estrutura FAT
+  %include "fatbpb-inc.asm"
+
+  ; Estrutura de infoções de partição
+  %include "partinfo-inc.asm"
+
   FREEMEM_START     equ (ShareData.End & ~0xF) + 0x10
 
   ;   Tamanho do setor é usado para calcular o posicionamento memória.
   ; Por enquanto, somente setores de 512 bytes são suportados.
   SECTOR_SIZE     equ 512               ; valor fixo, utilizado p/ evitar erros
+
 
 
 ;===============================================================================
@@ -186,281 +193,11 @@ Main:
   cmp   al, 3                           ; ve se eh um 80386 ou superior
   jb    ErrorCPU                        ; se nao for termina
   mov   [es:ShareData.CPULevel], al
-
 ; ------------------------------------------------------------------------------
 ; ### Temos pelo menos um 386 ###
 ; ------------------------------------------------------------------------------
-  [CPU 386]
+jmp Main_386
 
-  ; Detectar a memoria baixa (<1M)
-  xor   ax, ax
-  mov   fs, ax                          ; utilizando fs para acessar o segmento 0, liberando es
-  mov   cx, ax
-
-  int   0x12                            ; ax = kB
-
-  shl   ax, 6                           ; paragrafos total
-
-  mov   cx, [fs:EBDA_SEG_VETOR]         ; paragrafo ebda
-
-  cmp   ax, cx
-  jbe   .2
-
-  mov   ax, cx
-
-.2:
-  ; ax contem o ultimo paragrafo da memoria
-
-  xor   edx, edx
-  mov   dx, ax
-  shl   edx, 4
-  mov   [fs:ShareData.LowerMemory], edx       ; Quantidade de memoria em bytes
-
-  ; Imprime a quantidade de memoria
-  mov   ax, LOWERMEMORY_MSG
-  call  WriteAStr
-
-  mov   eax, edx
-  call  WriteUInt32
-
-  mov   ax, NEWLINE
-  call  WriteAStr
-
-  ; Copia imagem
-  mov   ax, COPY_MSG
-  call  WriteAStr
-
-  ; Calcula o tamanho total da imagem
-  xor   ecx, ecx
-  mov   cx, (End - Start)
-
-  ; Calcula inicio do destino
-  mov   eax, edx
-  sub   eax, ecx
-  shr   eax, 4                      ; calcula segmento
-  mov   es, ax
-
-  mov   si, (End - 1)
-  mov   di, si
-
-push  ax
-mov   ax, si
-call  WriteWordHex
-pop   ax
-
-
-  std
-  rep   movsb
-
-  ; Confere o CRC
-  xor   ax, ax
-  mov   dx, ax
-
-  mov   si, Start                       ; ES:SI = endereco para o bloco
-  mov   cx, (End_Img - Start)
-
-  call  CalcCRC32
-
-  xor   ax, [fs:ShareData.CRC32Sum]
-  jnz   .3
-
-  xor   dx, [fs:ShareData.CRC32Sum + 2]
-  jz    .4
-
-.3:
-  mov   ax, FAIL_MSG
-  call  WriteAStr
-
-  jmp   Abort
-
-.4:
-  mov   ax, OK_MSG
-  call  WriteAStr
-
-  push  es
-  push  Main_High
-ret
-
-
-
-;===============================================================================
-; Main_High
-; ------------------------------------------------------------------------------
-; Funcao principal no topo da memoria
-;===============================================================================
-
-Main_High:
-  ; Ajusta segmento de dados
-  push  cs
-  pop   ds
-
-  ; Ajusta a pilha logo abaixo desse segmento
-  cli
-  mov   ax, cs
-;  sub   ax, SEGSIZE_PH
-;  mov   ss, ax
-
-;  xor   ax, ax
-;  sub   ax, 4
-;  mov   sp, ax
-;  mov   bp, ax
-  sti
-
-  call  WriteWordHex
-
-  push  ax
-  push  bx
-  push  cx
-  push  dx
-  push  es
-
-  mov   ax, 0x0201
-  mov   cx, 0x0001
-  mov   dx, 0x0000
-
-  mov   bx, 0x0000
-  mov   es, bx
-
-  mov   bx, 0x0700
-
-;  int   0x13
-
-  pop   es
-  pop   dx
-  pop   cx
-  pop   bx
-  pop   ax
-
-  ; calcula o espaco livre para o Stage_2
-  xor   eax, eax
-
-  mov   ax, cs
-  shl   eax, 4
-  sub   eax, STACK_SIZE
-
-  mov   [FreeMemory], eax
-
-  ; Verifica se disquete
-  xor   ax, ax
-  mov   al, [fs:ShareData.PhysicalDriveNumber]
-
-  mov   dx, ax
-  and   al, 0x80
-  jz    .0
-
-  mov   ax, ERROR_HD
-  call  WriteAStr
-
-  jmp   Abort
-
-.0:
-  mov   ax, DISKINIT_MSG
-  call  WriteAStr
-
-  ; Inicializar o disco
-  mov   ax, dx
-  mov   bx, DiskInfo
-
-  call  InitDiskInfo
-  jnc   .1
-
-  mov   ax, ERROR_DISK_INIT
-  call  WriteAStr
-
-  jmp   Abort
-
-.1:
-  mov   ax, DiskInfo
-  mov   si, ax
-
-  call  PrintDriveInfo
-
-  mov   ax, LOADVBR_MSG
-  call  WriteAStr
-
-  ; Carregar VBR para obter informacoes do FS (fara diferenca quando for HD)
-  xor   ax, ax
-  mov   dx, ax
-
-  mov   cx, ax
-  inc   cx
-
-  mov   si, DiskInfo
-
-  mov   es, ax
-  mov   di, FREEMEM_START
-
-
-  mov   ax, 0x0201
-  mov   cx, 0x0001
-  mov   dx, 0x0000
-
-  mov   bx, 0x0000
-  mov   es, bx
-
-  mov   bx, 0x8000
-
-;  int   0x13
-
-;  call  WriteWordHex
-
-  xor   dx, dx
-  mov   ax, dx
-  inc   ax
-
-  mov   cx, ax
-  mov   bx, di
-
-
-;  call  ReadCHS2
-
-
-
-;  call  ReadLBA
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Test:
-
-
-  mov   ax, TEST_MSG
-  call  WriteAStr
-  call  Halt
 
 
 ;===============================================================================
@@ -468,8 +205,6 @@ Test:
 ; ############################ Procedimentos 8086 ##############################
 ;
 ;===============================================================================
-
-[CPU 8086]
 
 
   %include "writeastr-inc.asm"
@@ -522,100 +257,245 @@ jmp Abort
 
 
 
+;===============================================================================
+;
+; ################################ Código 386+ #################################
+;
+;===============================================================================
+
+  [CPU 386]
 
 
+;===============================================================================
+; Main_386
+; ------------------------------------------------------------------------------
+; Funcao principal com suporte a i386
+;===============================================================================
 
+Main_386:
+  ; Detectar a memoria baixa (<1M)
+  xor   ax, ax
+  mov   fs, ax                          ; utilizando fs para acessar o segmento 0, liberando es
+  mov   cx, ax
 
-ReadCHS2:
-  mov   byte [si + DiskInfoStruct.ErrorCount], 0
+  int   0x12                            ; ax = kB
 
-  push  cx                    ; salva para depois  (Q)
+  shl   ax, 6                           ; paragrafos total
 
-  mov   cl, 6
-  shl   dh, cl
-  xchg  dh, dl
+  mov   cx, [fs:EBDA_SEG_VETOR]         ; paragrafo ebda
 
-  or    dl, al
-  mov   cx, dx
+  cmp   ax, cx
+  jbe   .2
 
-  mov   dh, ah
-  mov   dl, [si + DiskInfoStruct.DriveNumber]
-
-  pop   ax                    ; Q
-
-  cmp   ax, 128
-  jbe   .1
-
-  mov   al, 128
-
-.1:
-  mov   ah, 0x02              ; funcao da BIOS
+  mov   ax, cx
 
 .2:
-  push  ax
+  ; ax contem o ultimo paragrafo da memoria
 
-  push  ax
-  mov   al, [si + DiskInfoStruct.DriveNumber]
-  call  ResetDisk
-  pop   ax
+  xor   edx, edx
+  mov   dx, ax
+  shl   edx, 4
+  mov   [fs:ShareData.LowerMemory], edx       ; Quantidade de memoria em bytes
 
-  int   0x13
+  ; Imprime a quantidade de memoria
+  mov   ax, LOWERMEMORY_MSG
+  call  WriteAStr
 
-  call WriteWordHex
+  mov   eax, edx
+  call  WriteUInt32
 
-  test  al, al
+  mov   ax, NEWLINE
+  call  WriteAStr
+
+  ; Copia imagem
+  mov   ax, COPY_MSG
+  call  WriteAStr
+
+  ; Calcula o tamanho total da imagem
+  xor   ecx, ecx
+  mov   cx, (End - Start)
+
+  ; Calcula inicio do destino
+  mov   eax, edx
+  sub   eax, ecx
+  shr   eax, 4                      ; calcula segmento
+  mov   es, ax
+
+  mov   si, (End - 1)
+  mov   di, si
+
+  std
+  rep   movsb
+
+  ; Confere o CRC
+  xor   ax, ax
+  mov   dx, ax
+
+  mov   si, Start                       ; ES:SI = endereco para o bloco
+  mov   cx, (End_Img - Start)
+
+  call  CalcCRC32
+
+  xor   ax, [fs:ShareData.CRC32Sum]
   jnz   .3
 
-  ; Verifica quantidade de erros
-  inc   byte [si + DiskInfoStruct.ErrorCount]
-  cmp   byte [si + DiskInfoStruct.ErrorCount], MAXREADERROR
-  ja    .error
-
-  mov   al, [si + DiskInfoStruct.DriveNumber]
-  call  ResetDisk
-  jc    .error
-
-  pop   ax
-  jmp   .2
+  xor   dx, [fs:ShareData.CRC32Sum + 2]
+  jz    .4
 
 .3:
-  pop   cx                    ; descarta pilha
-  xor   ah, ah                ; AL retorna setores lidos
-ret
+  mov   ax, FAIL_MSG
+  call  WriteAStr
 
-.error:
-  pop   cx                    ; descarta pilha
+  jmp   Abort
+
+.4:
+  mov   ax, OK_MSG
+  call  WriteAStr
+
+  push  es
+  push  Main_High
+retf
+
+
+;===============================================================================
+; Main_High
+; ------------------------------------------------------------------------------
+; Funcao principal no topo da memoria
+;===============================================================================
+
+Main_High:
+  ; Ajusta segmento de dados
+  push  cs
+  pop   ds
+
+  ; Ajusta a pilha logo abaixo desse segmento
+  cli
+  mov   ax, cs
+  sub   ax, SEGSIZE_PH
+  mov   ss, ax
+
   xor   ax, ax
-  stc
-ret
+  sub   ax, 4
+  mov   sp, ax
+  mov   bp, ax
+  sti
+
+  ; calcula o espaco livre para o Stage_2
+  xor   eax, eax
+
+  mov   ax, cs
+  shl   eax, 4
+  sub   eax, STACK_SIZE
+
+  mov   [FreeMemory], eax
+
+  ; Verifica se disquete
+  xor   ax, ax
+  mov   al, [fs:ShareData.PhysicalDriveNumber]
+
+  mov   dx, ax
+  and   al, 0x80
+  jz    .0
+
+  mov   ax, ERROR_HD
+  call  WriteAStr
+
+  jmp   Abort
+
+.0:
+  mov   ax, DISKINIT_MSG
+  call  WriteAStr
+
+  ; Inicializar o disco
+  mov   ax, dx
+  mov   bx, DiskInfo
+
+  call  InitDiskInfo
+  jnc   .1
+
+  mov   ax, ERROR_DISK_INIT
+  call  WriteAStr
+
+  jmp   Abort
+
+.1:
+  mov   ax, DiskInfo
+  mov   si, ax
+
+  call  PrintDiskInfo
+
+  ; Carregar VBR para obter informacoes do FS (fara diferenca quando for HD)
+  mov   ax, LOADVBR_MSG
+  call  WriteAStr
+
+  ; Inicio da particao LBA
+  xor   ax, ax
+  mov   dx, ax
+
+  mov   si, DiskInfo
+  mov   di, BootPart
+
+  ; Buffer
+  mov   es, ax
+  mov   bx, FREEMEM_START
+
+  call  InitPartitionInfo
+
+  mov   ax, di
+  call  PrintPartitionInfo
 
 
 
-;===========================================================================
-; Procedimento para leitura via int 0x13
-; O buffer está em ES:DI
-;
-; A INT 0x13 usa os seguintes parametros:
-;
-;   AH = 02
-;
-;   AL = number of sectors to read  (1-128 dec.)
-;   CH = track/cylinder number  (0-1023 dec., see below)
-;
-;   CL = sector number  (1-17 dec.)
-;
-;   DH = head number  (0-15 dec.)
-;
-;   DL = drive number (0=A:, 1=2nd floppy, 80h=drive 0, 81h=drive 1)
-;   ES:BX = pointer to buffer
-;
-; on return:
-;   AH = status  (see INT 13,STATUS)
-;   AL = number of sectors read
-;   CF = 0 if successful
-;      = 1 if error
-;===========================================================================
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Test:
+
+
+  mov   ax, TEST_MSG
+  call  WriteAStr
+  call  Halt
 
 
 
@@ -628,25 +508,9 @@ ret
 [CPU 386]
 
   %include "writeuint32-inc.asm"
-  %include "printdriveinfo-inc.asm"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-;  call  WriteWordHex
-
-
+  %include "printdiskinfo-inc.asm"
+  %include "initpartinfo-inc.asm"
+  %include "printpartinfo-inc.asm"
 
 
 ;===============================================================================
@@ -742,6 +606,7 @@ ABSOLUTE BSS
 
   FreeMemory    resd  1
   DiskInfo      resb  DISKINFOSIZE
+  BootPart      resb  PARTITIONINFOSIZE
 
 BSS_End:
 
