@@ -114,9 +114,5 @@ ReadLBA:
 ret
 
 .error:
-  mov   sp, bp
-  pop   bp
-
-  pop   bx
   stc
-ret
+jmp .exit

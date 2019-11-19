@@ -329,11 +329,12 @@ _normalize:
   jne   ErrorFS
 
   ; Inicializa bootdiskinfo
-  ; AX = 0
   mov   bx, bootdiskinfo                ; será usado depois
 
   mov   cx, DISKINFOSIZE
   mov   di, bx
+
+  xor   ax, ax
 
   cld
   rep   stosb
@@ -360,8 +361,7 @@ _normalize:
   mov   ax, STAGE1_SEG
   mov   es, ax
 
-  xor   ax, ax
-  mov   di, ax
+  xor   di, di
 
   mov   ax, [BPB.HiddenSectors]
   mov   dx, [BPB.HiddenSectors + 2]
