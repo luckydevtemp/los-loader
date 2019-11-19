@@ -5,6 +5,9 @@
 ;===========================================================================
 
 DetectCPULevel:
+  push  dx
+  push  cx
+
   ; Detectar o tipo de processador
   cli
 
@@ -128,5 +131,8 @@ DetectCPULevel:
   [CPU 8086]                            ; Evita que o restante do codigo fique em 386
 .detectado:
   mov   ax, cx
+
+  pop   cx
+  pop   dx
 ret
 
