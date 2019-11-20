@@ -437,7 +437,7 @@ Main_High:
   mov   di, BootPart
 
   ; Buffer
-  mov   es, ax
+  mov   es, ax                          ; ES = 0
   mov   bx, FREEMEM_START
 
   call  InitPartitionInfo
@@ -545,7 +545,7 @@ Test:
   ERROR_HD              db '  O boot por HD ainda nao eh suportado!', 10, 13, 0
   ERROR_DISK_INIT       db '  Nao foi possivel inicializar o disco de boot!', 10, 13, 0
 
-  DISKINIT_MSG          db '  Incializando disco:', 10, 13, 0
+  DISKINIT_MSG          db 10, 13, '  Incializando disco:', 10, 13, 0
 
   FDOTHER_MSG           db ' (Outro...)', 10, 13, 0
   FD1_MSG               db ' (5.25 - 360kB)', 10, 13, 0
@@ -559,7 +559,13 @@ Test:
 
   ERROR_CALC_LBA        db 10, 13, 'Houve um erro no calculo do LBA', 0
 
-  LOADVBR_MSG           db '  Carregando particao de boot', 10, 13, 0
+  LOADVBR_MSG           db 10, 13, '  Carregando particao de boot:', 10, 13, 0
+
+  VOLUMELABEL_MSG       db '  - LABEL: ', 0
+  ID_MSG                db 10, 13, '  - ID: ', 0
+  OEM_MSG               db 10, 13, '  - OEM: ', 0
+  START_MSG             db 10, 13, '  - START: ', 0
+  SIZE_MSG              db 10, 13, '  - SIZE: ', 0
 
 
 

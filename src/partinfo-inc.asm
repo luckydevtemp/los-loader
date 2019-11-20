@@ -1,11 +1,9 @@
-struc PartitionInfoStruct
-  ; OEM (DB 8 Bytes)
-  .OEM:                       resb  8
+struc PartitionInfoStruct     ; FAT
+  ; OEM (8+1)
+  .OEM:                       resb  9
 
-  ; Volume Label:
-  ; Este campo era usado para armazenar o nome de volume, mas o nome de volume
-  ; e, agora, armazenado em um arquivo especial no diretorio raiz.
-  .VolumeLabel:               resb  11
+  ; Volume Label (11+1)
+  .VolumeLabel:               resb  12
 
   ; ID:
   ; Este campo e um numero de serie randomico associado ao volume durante a
@@ -18,7 +16,7 @@ struc PartitionInfoStruct
   ; LBA de inicio da particao
   .Start:                     resd  1
 
-  ; Size:
+  ; Size (LBA)
   ; Este campo contem o numero total de setores do volume.
   .Size:                      resd  1
 
@@ -35,6 +33,11 @@ struc PartitionInfoStruct
   ; disco.
   .SectorsPerFAT:             resw  1
 
+  ; FATs:
+  ; Este campo indica o numero de copias da FAT armazenada no disco.
+  ; Tipicamente o valor deste campo e 2.
+  .FATs:                      resb  1
+
   ; Sectors Per Cluster:
   ; Devido a FAT ser limitada em numero de clusters (ou "unidades de alocacao")
   ; que ela pode indexar, volumes grandes sao suportado aumentando o numero de
@@ -43,11 +46,6 @@ struc PartitionInfoStruct
   ; Procure na base de conhecimentos da Microsoft sobre o termo
   ; "Tamanho de cluster padrao" para mais informacoes.
   .SectorsPerCluster:         resb  1
-
-  ; FATs:
-  ; Este campo indica o numero de copias da FAT armazenada no disco.
-  ; Tipicamente o valor deste campo e 2.
-  .FATs:                      resb  1
 
   ; Root Entries:
   ; Este campo e o numero total de entradas de nome de arquivos que pode ser
