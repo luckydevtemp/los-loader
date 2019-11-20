@@ -127,8 +127,8 @@ Main:
   ; ### Ajustes iniciais ###
   ; Garante que os segmentos sejam iguais a CS
 
-  mov   ax, cs
-  mov   ds, ax
+  push  cs
+  pop   ds
 
   xor   ax, ax
   mov   es, ax
@@ -273,10 +273,11 @@ jmp Abort
 ;===============================================================================
 
 Main_386:
-  ; Detectar a memoria baixa (<1M)
   xor   ax, ax
   mov   fs, ax                          ; utilizando fs para acessar o segmento 0, liberando es
-  mov   cx, ax
+
+  ; Detectar a memoria baixa (<1M)
+  mov   cx, ax                          ; evita erros por funções extras
 
   int   0x12                            ; ax = kB
 
@@ -318,7 +319,7 @@ Main_386:
   ; Calcula inicio do destino
   mov   eax, edx
   sub   eax, ecx
-  shr   eax, 4                      ; calcula segmento
+  shr   eax, 4                          ; calcula segmento
   mov   es, ax
 
   mov   si, (End - 1)
@@ -354,7 +355,7 @@ Main_386:
 
   push  es
   push  Main_High
-retf
+retf                                    ; salta para a cópia no topo da memória baixa
 
 
 ;===============================================================================
