@@ -75,6 +75,7 @@
   ; Por enquanto, somente setores de 512 bytes são suportados.
   SECTOR_SIZE     equ 512               ; valor fixo, utilizado p/ evitar erros
 
+  DIRENTRY_SIZE   equ 32          ; Tamanho de uma entrada de diretorio
 
 
 ;===============================================================================
@@ -566,20 +567,15 @@ Test:
   OEM_MSG               db 10, 13, '  - OEM: ', 0
   START_MSG             db 10, 13, '  - START: ', 0
   SIZE_MSG              db 10, 13, '  - SIZE: ', 0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  RESERVED_MSG          db 10, 13, '  - RESERVED: ', 0
+  FATSECT_MSG           db 10, 13, '  - FATSECT: ', 0
+  FATS_MSG              db 10, 13, '  - FATs: ', 0
+  CLUSTERSECT_MSG       db 10, 13, '  - CLUSTERSECT: ', 0
+  ROOTENTRIES_MSG       db 10, 13, '  - ROOTENTRIES: ', 0
+  FATLBA_MSG            db 10, 13, '  - FATLBA: ', 0
+  ROOTLBA_MSG           db 10, 13, '  - ROOTLBA: ', 0
+  DATALBA_MSG           db 10, 13, '  - DATALBA: ', 0
+  CLUSTERS_MSG          db 10, 13, '  - CLUSTERS: ', 0
 
 
   TEST_MSG          db  10, 13, 'Chegou ate aqui!', 10, 13, 0

@@ -57,13 +57,16 @@ struc PartitionInfoStruct     ; FAT
   .RootEntries:               resw  1
 
   ; LBA de inicio da primeira FAT
-  .FATLBA:                    resw  1
+  .FATLBA:                    resd  1
 
   ; LBA de inicio do diretorio raiz
-  .RootLBA:                   resw  1
+  .RootLBA:                   resd  1
 
   ; LBA de inicio da area de dados
-  .DataLBA:                   resw  1
+  .DataLBA:                   resd  1
+
+  ; Total de clusters na FAT
+  .Clusters:                  resd  1
 
   .End:
 endstruc

@@ -56,76 +56,83 @@ PrintPartitionInfo:
 
   call  WriteUInt32
 
+  ; Imprime os Setores reservados
+  mov   ax, RESERVED_MSG
+  call  WriteAStr
 
-  ; vReserved Sectors:
-  ; Este campo representa o numero de setores que precedem o inicio da primeira
-  ; FAT, incluindo o setor de boot. Ele deve sempre ter um valor maior que 1.
-;  .ReservedSectors:           resw  1
+  xor   eax, eax
+  mov   ax, [si + PartitionInfoStruct.ReservedSectors]
 
+  call  WriteUInt32
 
+  ; Imprime o tamanho da FAT em setores
+  mov   ax, FATSECT_MSG
+  call  WriteAStr
 
+  xor   eax, eax
+  mov   ax, [si + PartitionInfoStruct.SectorsPerFAT]
 
+  call  WriteUInt32
 
+  ; Imprime a quantidade de FATs
+  mov   ax, FATS_MSG
+  call  WriteAStr
 
+  xor   eax, eax
+  mov   al, [si + PartitionInfoStruct.FATs]
 
+  call  WriteUInt32
 
+  ; Imprime o tamanho dos clusters
+  mov   ax, CLUSTERSECT_MSG
+  call  WriteAStr
 
+  xor   eax, eax
+  mov   al, [si + PartitionInfoStruct.SectorsPerCluster]
 
+  call  WriteUInt32
 
+  ; Imprime quantidade de entradas no diretorio raiz
+  mov   ax, ROOTENTRIES_MSG
+  call  WriteAStr
+
+  xor   eax, eax
+  mov   ax, [si + PartitionInfoStruct.RootEntries]
+
+  call  WriteUInt32
+
+  ; Imprime FATLBA
+  mov   ax, FATLBA_MSG
+  call  WriteAStr
+
+  mov   eax, [si + PartitionInfoStruct.FATLBA]
+
+  call  WriteUInt32
+
+  ; Imprime RootLBA
+  mov   ax, ROOTLBA_MSG
+  call  WriteAStr
+
+  mov   eax, [si + PartitionInfoStruct.RootLBA]
+
+  call  WriteUInt32
+
+  ; Imprime DataLBA
+  mov   ax, DATALBA_MSG
+  call  WriteAStr
+
+  mov   eax, [si + PartitionInfoStruct.DataLBA]
+
+  call  WriteUInt32
+
+  ; Imprime Total de Clusters
+  mov   ax, CLUSTERS_MSG
+  call  WriteAStr
+
+  mov   eax, [si + PartitionInfoStruct.Clusters]
+
+  call  WriteUInt32
 
   pop   dx
   pop   si
 ret
-
-
-
-struc PartitionInfoStructx     ; FAT
-
-
-
-
-
-
-  ; Sectors Per FAT:
-  ; Este campo e o numero de setores ocupados por cada uma das FATs do volume.
-  ; Com esta informacao, junto com o numero de FATs e setores reservados listados
-  ; abaixo, podemos calcular onde inicia o diretorio raiz. Com o numero de
-  ; entradas do diretorio raiz, podemos calcular onde inicia a area de dados do
-  ; disco.
-  .SectorsPerFAT:             resw  1
-
-  ; FATs:
-  ; Este campo indica o numero de copias da FAT armazenada no disco.
-  ; Tipicamente o valor deste campo e 2.
-  .FATs:                      resb  1
-
-  ; Sectors Per Cluster:
-  ; Devido a FAT ser limitada em numero de clusters (ou "unidades de alocacao")
-  ; que ela pode indexar, volumes grandes sao suportado aumentando o numero de
-  ; setores por cluster. Este valor e inteiramente dependente do tamanho do
-  ; volume. Valores validos para este campo sao potencia de 2 entre 1 e 128.
-  ; Procure na base de conhecimentos da Microsoft sobre o termo
-  ; "Tamanho de cluster padrao" para mais informacoes.
-  .SectorsPerCluster:         resb  1
-
-  ; Root Entries:
-  ; Este campo e o numero total de entradas de nome de arquivos que pode ser
-  ; armazenada no diretorio raiz do volume. Em um HD tipico, o valor deste campo
-  ; e 512. Note, entretanto, que uma entrada e sempre usada como Nome de Volume,
-  ; e que arquivos com nomes logos usam multiplas entradas por arquivo. Desta
-  ; forma o maior numero de arquivos no diretorio raiz e, tipicamente, 511. Mas
-  ; voce vai descartar entradas se nomes longos sao usados.
-  .RootEntries:               resw  1
-
-  ; LBA de inicio da primeira FAT
-  .FATLBA:                    resw  1
-
-  ; LBA de inicio do diretorio raiz
-  .RootLBA:                   resw  1
-
-  ; LBA de inicio da area de dados
-  .DataLBA:                   resw  1
-
-  .End:
-endstruc
-
