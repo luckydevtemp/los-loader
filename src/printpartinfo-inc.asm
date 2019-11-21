@@ -65,6 +65,15 @@ PrintPartitionInfo:
 
   call  WriteUInt32
 
+  ; Imprime a quantidade de FATs
+  mov   ax, FATS_MSG
+  call  WriteAStr
+
+  xor   eax, eax
+  mov   al, [si + PartitionInfoStruct.FATs]
+
+  call  WriteUInt32
+
   ; Imprime o tamanho da FAT em setores
   mov   ax, FATSECT_MSG
   call  WriteAStr
@@ -74,12 +83,29 @@ PrintPartitionInfo:
 
   call  WriteUInt32
 
-  ; Imprime a quantidade de FATs
-  mov   ax, FATS_MSG
+  ; Imprime quantidade de entradas no diretorio raiz
+  mov   ax, ROOTENTRIES_MSG
   call  WriteAStr
 
   xor   eax, eax
-  mov   al, [si + PartitionInfoStruct.FATs]
+  mov   ax, [si + PartitionInfoStruct.RootEntries]
+
+  call  WriteUInt32
+
+  ; Imprime tamanho do diretorio raiz
+  mov   ax, ROOTSECTORS_MSG
+  call  WriteAStr
+
+  xor   eax, eax
+  mov   ax, [si + PartitionInfoStruct.RootSectors]
+
+  call  WriteUInt32
+
+  ; Imprime Total de Clusters
+  mov   ax, CLUSTERS_MSG
+  call  WriteAStr
+
+  mov   eax, [si + PartitionInfoStruct.Clusters]
 
   call  WriteUInt32
 
@@ -92,14 +118,6 @@ PrintPartitionInfo:
 
   call  WriteUInt32
 
-  ; Imprime quantidade de entradas no diretorio raiz
-  mov   ax, ROOTENTRIES_MSG
-  call  WriteAStr
-
-  xor   eax, eax
-  mov   ax, [si + PartitionInfoStruct.RootEntries]
-
-  call  WriteUInt32
 
   ; Imprime FATLBA
   mov   ax, FATLBA_MSG
@@ -125,13 +143,8 @@ PrintPartitionInfo:
 
   call  WriteUInt32
 
-  ; Imprime Total de Clusters
-  mov   ax, CLUSTERS_MSG
+  mov   ax, NEWLINE
   call  WriteAStr
-
-  mov   eax, [si + PartitionInfoStruct.Clusters]
-
-  call  WriteUInt32
 
   pop   dx
   pop   si

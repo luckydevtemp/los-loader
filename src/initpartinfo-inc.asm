@@ -161,6 +161,8 @@ InitPartitionInfo:
 
   inc   ax
 
+  mov   [di + PartitionInfoStruct.RootSectors], ax
+
   ; Calcula DataLBA
   xor   edx, edx
   mov   dx, ax

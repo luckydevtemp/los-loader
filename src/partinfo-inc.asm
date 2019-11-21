@@ -56,6 +56,8 @@ struc PartitionInfoStruct     ; FAT
   ; voce vai descartar entradas se nomes longos sao usados.
   .RootEntries:               resw  1
 
+  .RootSectors:               resw  1
+
   ; LBA de inicio da primeira FAT
   .FATLBA:                    resd  1
 

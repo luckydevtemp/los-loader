@@ -275,7 +275,7 @@ jmp Abort
 
 Main_386:
   xor   ax, ax
-  mov   fs, ax                          ; utilizando fs para acessar o segmento 0, liberando es
+  mov   gs, ax                          ; utilizando gs para acessar o segmento 0, liberando es
 
   ; Detectar a memoria baixa (<1M)
   mov   cx, ax                          ; evita erros por funções extras
@@ -284,7 +284,7 @@ Main_386:
 
   shl   ax, 6                           ; paragrafos total
 
-  mov   cx, [fs:EBDA_SEG_VETOR]         ; paragrafo ebda
+  mov   cx, [gs:EBDA_SEG_VETOR]         ; paragrafo ebda
 
   cmp   ax, cx
   jbe   .2
@@ -297,7 +297,7 @@ Main_386:
   xor   edx, edx
   mov   dx, ax
   shl   edx, 4
-  mov   [fs:ShareData.LowerMemory], edx       ; Quantidade de memoria em bytes
+  mov   [gs:ShareData.LowerMemory], edx       ; Quantidade de memoria em bytes
 
   ; Imprime a quantidade de memoria
   mov   ax, LOWERMEMORY_MSG
@@ -338,10 +338,10 @@ Main_386:
 
   call  CalcCRC32
 
-  xor   ax, [fs:ShareData.CRC32Sum]
+  xor   ax, [gs:ShareData.CRC32Sum]
   jnz   .3
 
-  xor   dx, [fs:ShareData.CRC32Sum + 2]
+  xor   dx, [gs:ShareData.CRC32Sum + 2]
   jz    .4
 
 .3:
@@ -393,7 +393,7 @@ Main_High:
 
   ; Verifica se disquete
   xor   ax, ax
-  mov   al, [fs:ShareData.PhysicalDriveNumber]
+  mov   al, [gs:ShareData.PhysicalDriveNumber]
 
   mov   dx, ax
   and   al, 0x80
@@ -445,6 +445,27 @@ Main_High:
 
   mov   ax, di
   call  PrintPartitionInfo
+
+  ;Carrega FAT (usa o segmento FS para manter em memoria)
+  mov   ax, [BootPart + PartitionInfoStruct.SectorsPerFAT]
+  mov   cx, SECTOR_SIZE
+  mul   cx
+
+  shl   edx, 16
+  mov   dx, ax
+
+  mov   eax, [FreeMemory]
+  sub   eax, edx
+
+  shr   eax, 4
+  mov   fs, ax
+
+
+  call  WriteUInt32
+
+
+
+
 
 
 
@@ -562,20 +583,27 @@ Test:
 
   LOADVBR_MSG           db 10, 13, '  Carregando particao de boot:', 10, 13, 0
 
-  VOLUMELABEL_MSG       db '  - LABEL: ', 0
-  ID_MSG                db 10, 13, '  - ID: ', 0
-  OEM_MSG               db 10, 13, '  - OEM: ', 0
-  START_MSG             db 10, 13, '  - START: ', 0
-  SIZE_MSG              db 10, 13, '  - SIZE: ', 0
-  RESERVED_MSG          db 10, 13, '  - RESERVED: ', 0
-  FATSECT_MSG           db 10, 13, '  - FATSECT: ', 0
-  FATS_MSG              db 10, 13, '  - FATs: ', 0
-  CLUSTERSECT_MSG       db 10, 13, '  - CLUSTERSECT: ', 0
-  ROOTENTRIES_MSG       db 10, 13, '  - ROOTENTRIES: ', 0
-  FATLBA_MSG            db 10, 13, '  - FATLBA: ', 0
-  ROOTLBA_MSG           db 10, 13, '  - ROOTLBA: ', 0
-  DATALBA_MSG           db 10, 13, '  - DATALBA: ', 0
-  CLUSTERS_MSG          db 10, 13, '  - CLUSTERS: ', 0
+  VOLUMELABEL_MSG       db '  - Volume: ', 0
+  ID_MSG                db '; ID: ', 0
+  OEM_MSG               db '; OEM: ', 0
+
+  START_MSG             db 10, 13, '  - Setores (LBA) => Inicio: ', 0
+  SIZE_MSG              db '; Tamanho: ', 0
+  RESERVED_MSG          db '; Reservados: ', 0
+
+  FATS_MSG              db 10, 13, '  - FATs => Quantidade: ', 0
+  FATSECT_MSG           db '; Setores por FAT: ', 0
+
+  ROOTENTRIES_MSG       db 10, 13, '  - Diretorio raiz => Entradas: ', 0
+  ROOTSECTORS_MSG       db '; Setores: ', 0
+
+  CLUSTERS_MSG          db 10, 13, '  - Clusters => Total: ', 0
+  CLUSTERSECT_MSG       db '; Setores por cluster: ', 0
+
+
+  FATLBA_MSG            db 10, 13, '  - Enderecos (LBA) => FAT: ', 0
+  ROOTLBA_MSG           db '; Diretorio Raiz: ', 0
+  DATALBA_MSG           db '; Areas de Dados: ', 0
 
 
   TEST_MSG          db  10, 13, 'Chegou ate aqui!', 10, 13, 0
@@ -607,6 +635,7 @@ End_Img:
 ABSOLUTE BSS
 ; ### Variaveis criadas pelo bootloader ###
 
+  ; Memoria livre de 0 até o limite usavel
   FreeMemory    resd  1
   DiskInfo      resb  DISKINFOSIZE
   BootPart      resb  PARTITIONINFOSIZE
