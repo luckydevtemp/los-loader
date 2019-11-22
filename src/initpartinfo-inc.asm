@@ -37,6 +37,10 @@ InitPartitionInfo:
 
   pop   di
 
+  ; Salva ponteiro para DiskInfo
+  mov   [di + PartitionInfoStruct.DiskInfo], si
+  mov   [di + PartitionInfoStruct.DiskInfo + 2], ds
+
   ; Inverte DS e ES para usar movs e stos
   mov   ax, ds
   push  es

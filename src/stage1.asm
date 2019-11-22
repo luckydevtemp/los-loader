@@ -446,7 +446,7 @@ Main_High:
   mov   ax, di
   call  PrintPartitionInfo
 
-  ;Carrega FAT (usa o segmento FS para manter em memoria)
+  ;Carrega FAT (usa o segmento FS para manter em memoria, começando no offset 0)
   mov   ax, [BootPart + PartitionInfoStruct.SectorsPerFAT]
   mov   cx, SECTOR_SIZE
   mul   cx
@@ -459,9 +459,16 @@ Main_High:
 
   shr   eax, 4
   mov   fs, ax
+  shl   eax, 4
+
+  mov   [FreeMemory], eax
+
+  mov   si, di
+
+  call  LoadFAT
 
 
-  call  WriteUInt32
+
 
 
 
@@ -534,6 +541,7 @@ Test:
   %include "printdiskinfo-inc.asm"
   %include "initpartinfo-inc.asm"
   %include "printpartinfo-inc.asm"
+  %include "loadfat-inc.asm"
 
 
 ;===============================================================================
