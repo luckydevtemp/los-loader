@@ -76,6 +76,7 @@
   SECTOR_SIZE     equ 512               ; valor fixo, utilizado p/ evitar erros
 
   DIRENTRY_SIZE   equ 32          ; Tamanho de uma entrada de diretorio
+  FILENAME_SIZE   equ 11      ; Tamanho dos nomes de arquivos
 
 
 ;===============================================================================
@@ -467,16 +468,29 @@ Main_High:
 
   call  LoadFAT
 
+  mov   ax, FILENAME
+  ; SI já está no lugar
+  mov   di, FileInfo
+  mov   bx, FREEMEM_START     ; ES = 0
+
+  call  SearchFile
+  jnc   .2
+
+  mov   ax, ERROR_FILE_NOT_FOUND
+  call  WriteAStr
+
+  jmp   Abort
+
+.2:
+
+
+  mov   eax, [di + FileInfoStruct.Size]
 
 
 
 
 
-
-
-
-
-
+  mov   ax, [di + FileInfoStruct.Cluster]
 
 
 
@@ -542,6 +556,8 @@ Test:
   %include "initpartinfo-inc.asm"
   %include "printpartinfo-inc.asm"
   %include "loadfat-inc.asm"
+  %include "searchfile-inc.asm"
+  %include "fileinfo-inc.asm"
 
 
 ;===============================================================================
@@ -608,10 +624,17 @@ Test:
   CLUSTERS_MSG          db 10, 13, '  - Clusters => Total: ', 0
   CLUSTERSECT_MSG       db '; Setores por cluster: ', 0
 
-
   FATLBA_MSG            db 10, 13, '  - Enderecos (LBA) => FAT: ', 0
   ROOTLBA_MSG           db '; Diretorio Raiz: ', 0
   DATALBA_MSG           db '; Areas de Dados: ', 0
+
+  FILENAME              db  'BOOT    BIN'
+
+  ERROR_FILE_NOT_FOUND  db 10, 'Arquivo gerenciador de boot nao encontrado!', 10, 13, 0
+
+
+
+
 
 
   TEST_MSG          db  10, 13, 'Chegou ate aqui!', 10, 13, 0
@@ -647,6 +670,7 @@ ABSOLUTE BSS
   FreeMemory    resd  1
   DiskInfo      resb  DISKINFOSIZE
   BootPart      resb  PARTITIONINFOSIZE
+  FileInfo      resb  FILEINFOSIZE
 
 BSS_End:
 

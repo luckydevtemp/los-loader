@@ -1,5 +1,7 @@
 WriteWordHex:
   push  bx
+  push  cx
+
   mov   cl, 4
   rol   al, cl
   rol   ah, cl
@@ -34,5 +36,6 @@ WriteWordHex:
   pop   cx
   loop  .loop
 
+  pop   cx
   pop   bx
 ret
