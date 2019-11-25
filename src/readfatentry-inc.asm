@@ -2,16 +2,26 @@
 ; ReadFatEntry
 ; --------------------------------------------------------------------------
 ; Le a entrada N da FAT
+;
+; AX    - Entrada N
+; CX    - Q
+; DS:SI - DiskInfo
+; ES:DI - Buffer
 ;===========================================================================
 
 ReadFatEntry:
+  push  dx
   push  bx
+
+
+
+
 
   xor   dx, dx
   mov   cx, ax
 
-  shr   ax, 1
-  mov   bx, 3
+  shr   ax, 1       ; /2
+  mov   bx, 3       ; *3
   mul   bx
 
   add   ax, FAT_BASE
@@ -30,5 +40,12 @@ ReadFatEntry:
 .0:
   and   ax, 0xFFF
 
+
+
+
+
+
+
   pop   bx
+  pop   dx
 ret

@@ -32,6 +32,18 @@ LoadFAT:
 
   call  ReadLBA
 
+
+
+
+
+
+  call  ReadFatEntry
+
+
+
+
+
+
   pop   es
   pop   ds
   pop   di

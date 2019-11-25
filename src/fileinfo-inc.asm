@@ -5,6 +5,9 @@ struc FileInfoStruct
   ; Cluster inicial
   .Cluster                    resw  1
 
+  ; Quantidade de setores
+  .Sectors                    resw  1
+
   .End:
 endstruc
 

@@ -49,12 +49,12 @@ SearchFile:
   dec   dx
   jnz   .loop
 
-  jmp   .Error
+  jmp   .Error2
 
 .FoundedFile:
   ; Verifica tipo do arquivo
   test  byte [es:bx + 11], 0x18            ; Diretorio e volumeid
-  jnz   .Error
+  jnz   .Error2
 
   pop   di
 
@@ -63,11 +63,25 @@ SearchFile:
   mov   [di + FileInfoStruct.Cluster], ax
 
   ; Pega o tamanho em bytes
-  mov   ax, [es:bx + 28]
-  mov   dx, [es:bx + 30]
+  mov   eax, [es:bx + 28]
+  mov   [di + FileInfoStruct.Size], eax
 
-  mov   [di + FileInfoStruct.Size], ax
-  mov   [di + FileInfoStruct.Size + 2], dx
+  ; Calcula o tamanho em setores
+  dec   eax
+  xor   edx, edx
+  mov   ebx, SECTOR_SIZE
+
+  div   ebx
+  inc   eax
+
+  cmp   eax, 0xFFFF
+  jna    .1
+
+  jmp   .Error1
+
+.1:
+  mov   [di + FileInfoStruct.Sectors], ax
+  clc
 
 .End:
   pop   si
@@ -78,7 +92,8 @@ SearchFile:
   pop   ax
 ret
 
-.Error:
+.Error2:
   pop   di
+.Error1:
   stc
 jmp .End

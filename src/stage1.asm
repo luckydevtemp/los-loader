@@ -78,6 +78,8 @@
   DIRENTRY_SIZE   equ 32          ; Tamanho de uma entrada de diretorio
   FILENAME_SIZE   equ 11      ; Tamanho dos nomes de arquivos
 
+  STAGE2_BASE     equ 0x1000
+
 
 ;===============================================================================
 ;
@@ -444,7 +446,7 @@ Main_High:
 
   call  InitPartitionInfo
 
-  mov   ax, di
+  mov   ax, di                          ; BootPart
   call  PrintPartitionInfo
 
   ;Carrega FAT (usa o segmento FS para manter em memoria, começando no offset 0)
@@ -456,6 +458,7 @@ Main_High:
   mov   dx, ax
 
   mov   eax, [FreeMemory]
+
   sub   eax, edx
 
   shr   eax, 4
@@ -464,7 +467,7 @@ Main_High:
 
   mov   [FreeMemory], eax
 
-  mov   si, di
+  mov   si, di                          ; BootPart
 
   call  LoadFAT
 
@@ -482,25 +485,38 @@ Main_High:
   jmp   Abort
 
 .2:
-
-
   mov   eax, [di + FileInfoStruct.Size]
+  test  eax, eax
+  jnz   .3
 
+  mov   ax, ERROR_FILE_INVALID
+  call  WriteAStr
 
+  jmp   Abort
 
+.3:
+  xor   eax, eax
+  mov   ax, [di + FileInfoStruct.Sectors]
+  mov   ebx, SECTOR_SIZE
 
+  mul   ebx
 
-  mov   ax, [di + FileInfoStruct.Cluster]
+  add   eax, STAGE2_BASE
 
+  cmp   eax, [FreeMemory]
+  jna   .4
 
+  mov   ax, ERROR_MEMORY
+  call  WriteAStr
 
+  call  Abort
 
+.4:
+  mov   ax, di                ; FileInfo
+  mov   bx, STAGE2_BASE       ; ES = 0
+  ; FS:0 = FAT carregada
 
-
-
-
-
-
+  call  LoadFile
 
 
 
@@ -558,6 +574,8 @@ Test:
   %include "loadfat-inc.asm"
   %include "searchfile-inc.asm"
   %include "fileinfo-inc.asm"
+  %include "loadfile-inc.asm"
+  %include "readfatentry-inc.asm"
 
 
 ;===============================================================================
@@ -630,9 +648,9 @@ Test:
 
   FILENAME              db  'BOOT    BIN'
 
-  ERROR_FILE_NOT_FOUND  db 10, 'Arquivo gerenciador de boot nao encontrado!', 10, 13, 0
-
-
+  ERROR_FILE_NOT_FOUND  db 10, 'Arquivo gerenciador de boot nao encontrado ou corrompido!', 10, 13, 0
+  ERROR_FILE_INVALID    db 10, 'Arquivo do Stage 2 nao e valido!', 10, 13, 0
+  ERROR_MEMORY          db 10, 13, 'Nao ha memoria disponivel para carregar o Stage 2', 10, 13, 0
 
 
 

@@ -58,6 +58,8 @@ struc PartitionInfoStruct     ; FAT
 
   .RootSectors:               resw  1
 
+  .Flag_EOC                   resw  1
+
   ; LBA de inicio da primeira FAT
   .FATLBA:                    resd  1
 
