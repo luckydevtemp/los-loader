@@ -12,8 +12,8 @@ SearchFile:
   push  dx
   push  cx
   push  bx
-  push  si
 
+  push  si
   push  di
   push  ax
 
@@ -49,12 +49,12 @@ SearchFile:
   dec   dx
   jnz   .loop
 
-  jmp   .Error2
+  jmp   .Error
 
 .FoundedFile:
   ; Verifica tipo do arquivo
   test  byte [es:bx + 11], 0x18            ; Diretorio e volumeid
-  jnz   .Error2
+  jnz   .Error
 
   pop   di
 
@@ -66,34 +66,21 @@ SearchFile:
   mov   eax, [es:bx + 28]
   mov   [di + FileInfoStruct.Size], eax
 
-  ; Calcula o tamanho em setores
-  dec   eax
-  xor   edx, edx
-  mov   ebx, SECTOR_SIZE
+  ; Salva informação do PartitionInfo
+  pop   si
+  mov   [di + FileInfoStruct.PartitionInfo], si
 
-  div   ebx
-  inc   eax
-
-  cmp   eax, 0xFFFF
-  jna    .1
-
-  jmp   .Error1
-
-.1:
-  mov   [di + FileInfoStruct.Sectors], ax
   clc
 
 .End:
-  pop   si
-
   pop   bx
   pop   cx
   pop   dx
   pop   ax
 ret
 
-.Error2:
+.Error:
   pop   di
-.Error1:
+  pop   si
   stc
 jmp .End

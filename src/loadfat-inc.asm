@@ -32,22 +32,18 @@ LoadFAT:
 
   call  ReadLBA
 
-
-
-
-
-
-  call  ReadFatEntry
-
-
-
-
-
-
   pop   es
   pop   ds
   pop   di
   pop   si
+
+  ; Le a flag de EOC
+  mov   ax, 1
+  call  ReadFatEntry
+  mov   [si + PartitionInfoStruct.Flag_EOC], ax
+
+  call  ReadFatEntry
+
   pop   dx
   pop   cx
   pop   ax

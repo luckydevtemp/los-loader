@@ -471,11 +471,6 @@ Main_High:
 
   call  LoadFAT
 
-  ; Le a flag de EOC
-  mov   ax, 1
-  call  ReadFatEntry
-  mov   [di + PartitionInfoStruct.Flag_EOC], ax
-
   mov   ax, FILENAME
   ; SI já está no lugar
   mov   di, FileInfo
@@ -491,6 +486,7 @@ Main_High:
 
 .2:
   mov   eax, [di + FileInfoStruct.Size]
+
   test  eax, eax
   jnz   .3
 
@@ -500,9 +496,12 @@ Main_High:
   jmp   Abort
 
 .3:
-  xor   eax, eax
-  mov   ax, [di + FileInfoStruct.Sectors]
   mov   ebx, SECTOR_SIZE
+
+  xor   edx, edx
+  dec   eax
+  div   ebx
+  inc   eax
 
   mul   ebx
 

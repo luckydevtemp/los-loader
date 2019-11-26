@@ -25,7 +25,7 @@ ReadFatEntry:
   mov   ax, [fs:bx]
   mov   dx, [fs:bx + 2]
 
-  and   cx, 1
+  test  cx, 1
   jz    .0
 
   and   dx, 0x00FF
