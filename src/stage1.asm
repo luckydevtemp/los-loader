@@ -471,6 +471,11 @@ Main_High:
 
   call  LoadFAT
 
+  ; Le a flag de EOC
+  mov   ax, 1
+  call  ReadFatEntry
+  mov   [di + PartitionInfoStruct.Flag_EOC], ax
+
   mov   ax, FILENAME
   ; SI já está no lugar
   mov   di, FileInfo
