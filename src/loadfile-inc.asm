@@ -7,8 +7,13 @@
 ;===========================================================================
 
 LoadFile:
+  push  eax
+  push  bx
+  push  ecx
+  push  edx
 
-
+  push  si
+  push  di
 
   mov   di, bx                          ; Buffer
   mov   bx, ax                          ; InfoFile
@@ -44,7 +49,7 @@ LoadFile:
   ja    .Error
 
   mov   cx, ax                          ; Numero de clusters
-  mov   ax, [bx + FileInfoStruct.Cluster]
+  mov   ax, [bx + FileInfoStruct.StartCluster]
 
 .loop:
   cmp   ax, 0x2                         ; Primeiro (1) e segundo (2) entradas sao reservadas
@@ -80,46 +85,23 @@ LoadFile:
   call  ReadFatEntry                    ; AX = proximo cluster
 
   pop   cx
-  loop  .loop
+loop  .loop
 
+  xor    ax, [si + PartitionInfoStruct.Flag_EOC]
+  jnz    .Error
 
-
-
-
-
-
-
-
+  clc
 
 .End:
+  pop   di
+  pop   si
 
-
+  pop   edx
+  pop   ecx
+  pop   bx
+  pop   eax
 ret
 
-
 .Error:
-
+  stc
 jmp   .End
-
-
-
-
-
-  ;xor    ax, [flag_eoc]
-  ;jnz    Error
-
-  ;xor   ax, ax
-
-  ;push  word [stage2_ph]
-  ;push  ax
-
-  ;; Alguns parametros nao podem ser obtidos pelo stage2, nesse caso TEMOS que passar ao stage2
-  ;;
-  ;; DX, AX  Inicio da particao
-  ;; CL      Disco fisico
-
-  ;mov   ax, [BPB.HiddenSectors]
-  ;mov   dx, [BPB.HiddenSectors + 2]
-  ;mov   cl, [BPB.PhysicalDriveNumber]   ; Coloca o driver para o stage2 saber de onde veio
-;retf                                    ; <---- salta para o stage2
-

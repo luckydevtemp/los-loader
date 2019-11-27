@@ -6,7 +6,7 @@ struc FileInfoStruct
   .Size                       resd  1
 
   ; Cluster inicial
-  .Cluster                    resw  1
+  .StartCluster                    resw  1
 
   .End:
 endstruc

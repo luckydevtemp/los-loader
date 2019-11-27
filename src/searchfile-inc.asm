@@ -60,7 +60,7 @@ SearchFile:
 
   ; Pega o primeiro cruster do arquivo
   mov   ax, [es:bx + 26]
-  mov   [di + FileInfoStruct.Cluster], ax
+  mov   [di + FileInfoStruct.StartCluster], ax
 
   ; Pega o tamanho em bytes
   mov   eax, [es:bx + 28]

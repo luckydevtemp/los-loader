@@ -49,13 +49,15 @@
     CRC_32          equ 0
   %endif
 
-  EBDA_SEG_VETOR    equ 0x040E
+  EBDA_SEG_VETOR    equ 0x040E          ; Word
+  BDA_ADDR6845      equ 0x0463          ; Word
+  BDA_CRTCOLS       equ 0x044A          ; Word
 
   STACK_SIZE        equ 512
 
   SEGSIZE_PH        equ 0x1000
 
-  STAGE2_BASE       equ 0x1000      ; 4 kB
+  STAGE2_BASE       equ 0x1000          ; 4 kB
 
   ; Estrutura de informações de disco
   %include "diskinfo-inc.asm"
@@ -73,12 +75,12 @@
 
   ;   Tamanho do setor é usado para calcular o posicionamento memória.
   ; Por enquanto, somente setores de 512 bytes são suportados.
-  SECTOR_SIZE     equ 512               ; valor fixo, utilizado p/ evitar erros
+  SECTOR_SIZE       equ 512             ; valor fixo, utilizado p/ evitar erros
 
-  DIRENTRY_SIZE   equ 32          ; Tamanho de uma entrada de diretorio
-  FILENAME_SIZE   equ 11      ; Tamanho dos nomes de arquivos
+  DIRENTRY_SIZE     equ 32              ; Tamanho de uma entrada de diretorio
+  FILENAME_SIZE     equ 11              ; Tamanho dos nomes de arquivos
 
-  STAGE2_BASE     equ 0x1000
+  STAGE2_BASE       equ 0x1000
 
 
 ;===============================================================================
@@ -90,9 +92,14 @@ ABSOLUTE  0x0600
 
 ShareData:
   ; Aqui ficam as variaveis a serem passados ao stage2
-  .PhysicalDriveNumber   resb  1
-  .CPULevel              resb  1
-  .LowerMemory           resd  1
+  .PhysicalDriveNumber    resb  1
+  .CPULevel               resb  1
+  .LowerMemory            resd  1
+  .CRTPort                resw  1
+  .CRTSeg                 resw  1
+  .CRTRows                resb  1
+  .CRTCols                resb  1
+
   ; Aqui ficam as variaveis temporarias que nao podem ficar na secao principal
   .CRC32Sum              resd  1
 
@@ -281,7 +288,7 @@ Main_386:
   mov   gs, ax                          ; utilizando gs para acessar o segmento 0, liberando es
 
   ; Detectar a memoria baixa (<1M)
-  mov   cx, ax                          ; evita erros por funções extras
+  mov   cx, ax                          ; evita erros por funções extras (int12)
 
   int   0x12                            ; ax = kB
 
@@ -312,7 +319,7 @@ Main_386:
   mov   ax, NEWLINE
   call  WriteAStr
 
-  ; Copia imagem
+  ; Copia imagem (autocopia)
   mov   ax, COPY_MSG
   call  WriteAStr
 
@@ -393,6 +400,45 @@ Main_High:
   sub   eax, STACK_SIZE
 
   mov   [FreeMemory], eax
+
+  ; Pega informações de vídeo
+  ; (É possivel fazer em pascal, mas terei video se algo der errado lá)
+  mov   ax, [gs:BDA_ADDR6845]
+  mov   [gs:ShareData.CRTPort], ax
+
+  mov   ax, [gs:BDA_CRTCOLS]
+  test  ah, ah
+  jz    .a0
+
+  mov   ax, ERROR_CRT_INFO
+  call  WriteAStr
+
+  jmp   Abort
+
+.a0:
+
+
+
+
+
+
+
+;  .CRTSeg                 resw  1
+;  .CRTRows                resb  1
+;  .CRTCols                resb  1
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   ; Verifica se disquete
   xor   ax, ax
@@ -655,6 +701,7 @@ Test:
   ERROR_FILE_NOT_FOUND  db 10, 'Arquivo gerenciador de boot nao encontrado ou corrompido!', 10, 13, 0
   ERROR_FILE_INVALID    db 10, 'Arquivo do Stage 2 nao e valido!', 10, 13, 0
   ERROR_MEMORY          db 10, 13, 'Nao ha memoria disponivel para carregar o Stage 2', 10, 13, 0
+  ERROR_CRT_INFO        db 10, 13, 'Falha na deteccao do video', 10, 13, 0
 
 
 
