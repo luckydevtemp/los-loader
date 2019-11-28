@@ -1,4 +1,5 @@
 WriteWordHex:
+  push  ax
   push  bx
   push  cx
 
@@ -38,4 +39,5 @@ WriteWordHex:
 
   pop   cx
   pop   bx
+  pop   ax
 ret

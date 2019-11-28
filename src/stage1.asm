@@ -50,8 +50,14 @@
   %endif
 
   EBDA_SEG_VETOR    equ 0x040E          ; Word
-  BDA_ADDR6845      equ 0x0463          ; Word
+
+  BDA_CRTMODE       equ 0x0449          ; Byte
   BDA_CRTCOLS       equ 0x044A          ; Word
+  BDA_ADDR6845      equ 0x0463          ; Word
+  BDA_CRTROWS       equ 0x0484          ; Byte
+
+  CGASEG            equ 0xB800
+  MDASEG            equ 0xB000
 
   STACK_SIZE        equ 512
 
@@ -402,43 +408,75 @@ Main_High:
   mov   [FreeMemory], eax
 
   ; Pega informações de vídeo
-  ; (É possivel fazer em pascal, mas terei video se algo der errado lá)
+  ; (É possivel fazer em pascal, mas não terei video se algo der errado lá)
+  mov   ax, CRTINTI_MSG
+  call  WriteAStr
+
+  ; Modo
+  mov   ax, CRTMODE_MSG
+  call  WriteAStr
+
+  xor   ax, ax
+  mov   al, [gs:BDA_CRTMODE]
+
+  call  WriteWordHex
+
+  ; Seg
+  cmp   al, 7
+  je    .1                              ; MDA
+
+  mov   dx, CGASEG
+  jmp   .2
+
+.1:
+  mov   dx, MDASEG
+
+.2:
+  mov   [gs:ShareData.CRTSeg], dx
+
+  mov   ax, CRTSEG_MSG
+  call  WriteAStr
+
+  mov   ax, dx
+  call  WriteWordHex
+
+  ; Port
+  mov   ax, CRTPORT_MSG
+  call  WriteAStr
+
   mov   ax, [gs:BDA_ADDR6845]
   mov   [gs:ShareData.CRTPort], ax
 
+  call  WriteWordHex
+
+  ; Rows
+  mov   ax, CRTROWS_MSG
+  call  WriteAStr
+
+  xor   eax, eax
+  mov   al, [gs:BDA_CRTROWS]
+  mov   [gs:ShareData.CRTRows], al
+
+  call  WriteUInt32
+
+  ; Cols
+  mov   ax, CRTCOLS_MSG
+  call  WriteAStr
+
+  xor   eax, eax
+
   mov   ax, [gs:BDA_CRTCOLS]
   test  ah, ah
-  jz    .a0
+  jz    .3
 
   mov   ax, ERROR_CRT_INFO
   call  WriteAStr
 
   jmp   Abort
 
-.a0:
-
-
-
-
-
-
-
-;  .CRTSeg                 resw  1
-;  .CRTRows                resb  1
-;  .CRTCols                resb  1
-
-
-
-
-
-
-
-
-
-
-
-
-
+.3:
+  mov   [gs:ShareData.CRTCols], al
+  call  WriteUInt32
 
   ; Verifica se disquete
   xor   ax, ax
@@ -446,14 +484,14 @@ Main_High:
 
   mov   dx, ax
   and   al, 0x80
-  jz    .0
+  jz    .4
 
   mov   ax, ERROR_HD
   call  WriteAStr
 
   jmp   Abort
 
-.0:
+.4:
   mov   ax, DISKINIT_MSG
   call  WriteAStr
 
@@ -462,14 +500,14 @@ Main_High:
   mov   bx, DiskInfo
 
   call  InitDiskInfo
-  jnc   .1
+  jnc   .5
 
   mov   ax, ERROR_DISK_INIT
   call  WriteAStr
 
   jmp   Abort
 
-.1:
+.5:
   mov   ax, DiskInfo
   mov   si, ax
 
@@ -523,25 +561,25 @@ Main_High:
   mov   bx, FREEMEM_START     ; ES = 0
 
   call  SearchFile
-  jnc   .2
+  jnc   .6
 
   mov   ax, ERROR_FILE_NOT_FOUND
   call  WriteAStr
 
   jmp   Abort
 
-.2:
+.6:
   mov   eax, [di + FileInfoStruct.Size]
 
   test  eax, eax
-  jnz   .3
+  jnz   .7
 
   mov   ax, ERROR_FILE_INVALID
   call  WriteAStr
 
   jmp   Abort
 
-.3:
+.7:
   mov   ebx, SECTOR_SIZE
 
   xor   edx, edx
@@ -554,19 +592,21 @@ Main_High:
   add   eax, STAGE2_BASE
 
   cmp   eax, [FreeMemory]
-  jna   .4
+  jna   .8
 
   mov   ax, ERROR_MEMORY
   call  WriteAStr
 
   call  Abort
 
-.4:
+.8:
   mov   ax, di                ; FileInfo
   mov   bx, STAGE2_BASE       ; ES = 0
   ; FS:0 = FAT carregada
 
   call  LoadFile
+
+  ; Verifica informações do Stage 2
 
 
 
@@ -659,7 +699,7 @@ Test:
   ERROR_HD              db '  O boot por HD ainda nao eh suportado!', 10, 13, 0
   ERROR_DISK_INIT       db '  Nao foi possivel inicializar o disco de boot!', 10, 13, 0
 
-  DISKINIT_MSG          db 10, 13, '  Incializando disco:', 10, 13, 0
+  DISKINIT_MSG          db 10, 10, 13, '  Incializando disco:', 10, 13, 0
 
   FDOTHER_MSG           db ' (Outro...)', 10, 13, 0
   FD1_MSG               db ' (5.25 - 360kB)', 10, 13, 0
@@ -703,7 +743,12 @@ Test:
   ERROR_MEMORY          db 10, 13, 'Nao ha memoria disponivel para carregar o Stage 2', 10, 13, 0
   ERROR_CRT_INFO        db 10, 13, 'Falha na deteccao do video', 10, 13, 0
 
-
+  CRTINTI_MSG           db 10, 13, '  Informacoes de video:', 10, 13, 0
+  CRTMODE_MSG           db '  - Modo: 0x', 0
+  CRTSEG_MSG            db 10, 13, '  - Seg:  0x', 0
+  CRTPORT_MSG           db 10, 13, '  - Port: 0x', 0
+  CRTROWS_MSG           db 10, 13, '  - Linhas:  ', 0
+  CRTCOLS_MSG           db 10, 13, '  - Colunas: ', 0
 
 
   TEST_MSG          db  10, 13, 'Chegou ate aqui!', 10, 13, 0

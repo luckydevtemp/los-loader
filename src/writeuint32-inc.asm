@@ -1,6 +1,7 @@
 ; EAX = UInt32
 
 WriteUInt32:
+  push  eax
   push  ecx
   push  edx
   push  di
@@ -47,4 +48,5 @@ WriteUInt32:
   pop   di
   pop   edx
   pop   ecx
+  pop   eax
 ret
