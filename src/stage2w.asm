@@ -53,12 +53,23 @@ SECTION .text
 
 
 LUF_FLAG_LITTLE   equ 0x80
+LUF_FIELDS_32     equ 2       ; 2 Words
 
 LUF_HASH_NONE     equ 0
 LUF_HASH_CRC32    equ 1
 
-FILE_SIZE         equ 0   ; terá que ser passado por def
-HASH_CRC32        equ 4
+
+%ifndef FILE_SIZE
+  FILE_SIZE       equ 0
+%endif
+
+%ifndef FILE_CRC32
+  FILE_CRC32      equ 0
+%endif
+
+%ifndef HEADER_CRC32
+  HEADER_CRC32    equ 0
+%endif
 
 
 ; ##############################################################################
@@ -69,7 +80,7 @@ HASH_CRC32        equ 4
 LUF:
   .Sign         db  'LUF'
 
-  .Flags        db  LUF_FLAG_LITTLE + 2                     ; (LE + 2 Words)
+  .Flags        db  LUF_FLAG_LITTLE + LUF_FIELDS_32
 
   .Hashs        db  (LUF_HASH_CRC32 << 4) + LUF_HASH_NONE   ; File:Header
 
@@ -77,11 +88,11 @@ LUF:
 
   .Header_Size  dd  (LUF.End - LUF)
 
-  .File_Size    db  FILE_SIZE
+  .File_Size    dd  FILE_SIZE
 
-  .Hash_Header:     ; LUF_HASH_NONE
+  .Hash_Header  ; LUF_HASH_NONE
 
-  .Hash_File    db  HASH_CRC32
+  .Hash_File    dd  FILE_CRC32
 
   .ID           db  'nao faco ideia'
 
