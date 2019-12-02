@@ -39,8 +39,8 @@
 GLOBAL start
 
 ; informacoes da imagem em memoria
-EXTERN bootloader_start, bootloader_end
-EXTERN bootloader_code, bootloader_data, bootloader_bss
+; EXTERN bootloader_start, bootloader_end
+; EXTERN bootloader_code, bootloader_data, bootloader_bss
 
 ; rotina principal do kernel
 EXTERN bootinit
@@ -49,6 +49,53 @@ EXTERN bootinit
 SECTION .text
 
 [BITS 32]
+
+
+
+LUF_FLAG_LITTLE   equ 0x80
+
+LUF_HASH_NONE     equ 0
+LUF_HASH_CRC32    equ 1
+
+FILE_SIZE         equ 0   ; terá que ser passado por def
+HASH_CRC32        equ 4
+
+
+; ##############################################################################
+;
+;                                     Header
+;
+; ##############################################################################
+LUF:
+  .Sign         db  'LUF'
+
+  .Flags        db  LUF_FLAG_LITTLE + 2                     ; (LE + 2 Words)
+
+  .Hashs        db  (LUF_HASH_CRC32 << 4) + LUF_HASH_NONE   ; File:Header
+
+  .ID_Size      db  (LUF.ID_End - LUF.ID)
+
+  .Header_Size  dd  (LUF.End - LUF)
+
+  .File_Size    db  FILE_SIZE
+
+  .Hash_Header:     ; LUF_HASH_NONE
+
+  .Hash_File    db  HASH_CRC32
+
+  .ID           db  'nao faco ideia'
+
+  .ID_End:
+
+
+  ; Extendido
+
+  .End:
+
+
+
+
+
 
 start:
   ; Ajustando valor da base da pilha passada a bootinit
