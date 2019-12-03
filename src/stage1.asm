@@ -228,7 +228,7 @@ jmp Main_386
   %include "calccrc32-inc.asm"
   %include "deteccpu-inc.asm"
   %include "initdiskinfo-inc.asm"
-  %include "readlba-inc.asm"
+  %include "readlba2-inc.asm"
   %include "lba2chs-inc.asm"
   %include "readchs-inc.asm"
   %include "resetdisk-inc.asm"
@@ -607,6 +607,8 @@ Main_High:
   call  LoadFile
 
   ; Verifica informações do Stage 2
+;  mov   eax, [es:bx]
+;  call  WriteWordHex
 
 
 

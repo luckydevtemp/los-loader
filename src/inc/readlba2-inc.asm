@@ -20,98 +20,124 @@
 ; Place, Suite 330, Boston, MA 02111-1307, USA. Ou acesse o site do GNU e
 ; obtenha sua licenca: http://www.gnu.org/
 ;===============================================================================
-; stage2w.asm
+; readlbs-inc.asm
 ; ------------------------------------------------------------------------------
-;   Arquivo escrito em Assembly que "envolve" o código escrito em linguagem
-; de alto nivel, ele server para fazer a inicializacao inicial do stage2.
+; Arquivo include com a rotina ReadLBA
 ; ------------------------------------------------------------------------------
-; Criado em: 13/02/2018
+; Criado em: 04/08/2019
 ; ------------------------------------------------------------------------------
-; Compilar: Compilavel pelo nasm (montar)
-; > nasm -f bin stage2w.asm
+; Compilar: Nao compilavel (e utilizado por outro arquivo)
 ; ------------------------------------------------------------------------------
-; Executar: Este arquivo precisa ser linkado com o LD para ser carregado
-;   pelo bootloader.
-;===========================================================================
-
-; não possui configurações ainda
-
-GLOBAL start
-
-; informacoes da imagem em memoria
-; EXTERN bootloader_start, bootloader_end
-; EXTERN bootloader_code, bootloader_data, bootloader_bss
-
-; rotina principal do kernel
-EXTERN bootinit
+; Executar: Nao executavel
+;===============================================================================
 
 
-SECTION .text
-
-[BITS 32]
-
-
-
-LUF_FLAG_LITTLE   equ 0x80
-LUF_FIELDS_32     equ 2       ; 2 Words
-
-LUF_HASH_NONE     equ 0
-LUF_HASH_CRC32    equ 1
-
-
-%ifndef FILE_SIZE
-  FILE_SIZE       equ 0
-%endif
-
-%ifndef FILE_CRC32
-  FILE_CRC32      equ 0
-%endif
-
-%ifndef HEADER_CRC32
-  HEADER_CRC32    equ 0
-%endif
-
-
-; ##############################################################################
+;===============================================================================
+; ReadLBA
+; ------------------------------------------------------------------------------
+; Le setores em LBA
 ;
-;                                     Header
-;
-; ##############################################################################
-LUF:
-  .Sign         db  'LUF'
+; DX:AX - Setor LBA
+; CX    - Q
+; DS:SI - DiskInfo
+; ES:DI - Buffer
+;===============================================================================
 
-  .Flags        db  LUF_FLAG_LITTLE + LUF_FIELDS_32
+ReadLBA:
+  push  bx
 
-  .Hashs        db  (LUF_HASH_CRC32 << 4) + LUF_HASH_NONE   ; File:Header
+  push  bp
+  mov   bp, sp
 
-  .ID_Size      db  (LUF.ID_End - LUF.ID)
+.next:
+  or    cx, cx
+  jz    .exit
 
-  .Header_Size  dd  (LUF.End - LUF)
+  push  cx
+  push  ax
+  push  dx
+  push  es
+  push  di
 
-  .File_Size    dd  FILE_SIZE
+  call  LBA2CHS
+  jc    .error
 
-  .Hash_Header: ; LUF_HASH_NONE
-
-  .Hash_File    dd  FILE_CRC32
-
-  .ID           db  'nao faco ideia'
-
-  .ID_End:
-
-
-  ; Extendido
-
-  .End:
+  mov   bx, di
 
 
 
 
 
 
-start:
-  ; Ajustando valor da base da pilha passada a bootinit
-  mov   eax, ebp
-  add   eax, 4
-  push  eax
 
-  call  bootinit
+  test  byte [Trap], 1
+  jz    .notrap
+
+  mov   ax, bx
+  call  WriteWordHex
+
+
+  jmp   Abort
+
+.notrap:
+
+
+
+
+
+
+
+
+
+  call  ReadCHS                         ; ax = setores lidos
+  jc    .error
+
+  mov   bx, ax                          ; bx = setores lidos
+
+  ; Calcula bytes lidos
+  xor   dx, dx
+  mov   ax, SECTOR_SIZE
+  mul   bx
+
+  ; Corrige endereco do buffer
+  pop   di
+
+  add   di, ax
+  adc   dx, 0
+
+  mov   cl, 12
+  shl   dx, cl
+  jc    .error
+
+  pop   ax                              ; Valor de ES
+
+  add   ax, dx
+  jc    .error
+
+  mov   es, ax
+
+  ; Calcula novo setor LBA
+  pop   dx
+  pop   ax
+
+  add   ax, bx
+  adc   dx, 0
+
+  pop   cx
+
+  cmp   bx, cx
+  ja    .error
+
+  sub   cx, bx
+  jmp   .next
+
+.exit:
+  mov   sp, bp
+  pop   bp
+
+  pop   bx
+ret
+
+.error:
+  stc
+jmp .exit

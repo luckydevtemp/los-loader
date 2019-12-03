@@ -7,6 +7,9 @@
 ;===========================================================================
 
 LoadFile:
+  push  ds
+  push  es
+
   push  eax
   push  bx
   push  ecx
@@ -63,7 +66,9 @@ LoadFile:
 
   ; Calcula posicao na area de dados
   sub   ax, 2                           ; 2 cluster = 0 dados
-  mov   cx, [si + PartitionInfoStruct.SectorsPerCluster]
+
+  xor   cx, cx
+  mov   cl, [si + PartitionInfoStruct.SectorsPerCluster]
 
   mul   cx                              ; DX:AX - setor na area de dados
                                         ; CX    - quantidade de setores a ler
@@ -77,7 +82,18 @@ LoadFile:
 
   ; ES:DI = buffer
 
+  mov   byte [Trap], 1
+
   call  ReadLBA
+
+
+  mov   ax, [es:di]
+  call  WriteWordHex
+  jmp   Abort
+
+
+
+
 
   pop   si
   pop   ax                              ; reculpera o numero do cluster
@@ -100,8 +116,14 @@ loop  .loop
   pop   ecx
   pop   bx
   pop   eax
+
+  pop   es
+  pop   ds
 ret
 
 .Error:
   stc
 jmp   .End
+
+
+Trap  db  0
