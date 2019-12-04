@@ -228,7 +228,7 @@ jmp Main_386
   %include "calccrc32-inc.asm"
   %include "deteccpu-inc.asm"
   %include "initdiskinfo-inc.asm"
-  %include "readlba2-inc.asm"
+  %include "readlba-inc.asm"
   %include "lba2chs-inc.asm"
   %include "readchs2-inc.asm"
   %include "resetdisk-inc.asm"
