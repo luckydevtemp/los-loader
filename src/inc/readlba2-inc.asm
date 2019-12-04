@@ -64,17 +64,6 @@ ReadLBA:
 
   mov   bx, di
 
-
-
-
-
-
-
-
-
-
-
-
   call  ReadCHS                         ; ax = setores lidos
   jc    .error
 

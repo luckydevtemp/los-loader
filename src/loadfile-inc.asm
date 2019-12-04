@@ -82,18 +82,7 @@ LoadFile:
 
   ; ES:DI = buffer
 
-  mov   byte [Trap], 1
-
   call  ReadLBA
-
-
-  mov   ax, [es:di]
-  call  WriteWordHex
-  jmp   Abort
-
-
-
-
 
   pop   si
   pop   ax                              ; reculpera o numero do cluster
@@ -124,6 +113,3 @@ ret
 .Error:
   stc
 jmp   .End
-
-
-Trap  db  0

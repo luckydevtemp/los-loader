@@ -45,8 +45,44 @@
 ; AX    - Retorna numero de setores lidos
 ;===========================================================================
 
+
 ReadCHS:
   mov   byte [si + DiskInfoStruct.ErrorCount], 0
+
+  push  ax
+  push  dx
+  push  bx
+
+  cmp   cx, 128
+  jbe   .1
+
+  xor   cx, cx
+  mov   cl, 128
+
+.1:
+  xor   ax, ax
+  sub   ax, bx            ; Calcula quantos bytes livres no segmento
+
+  test  ax, ax
+  jz    .2
+
+  dec   ax                ; garante que nao cruzará o segmento
+
+.2:
+  xor   dx, dx
+  mov   bx, SECTOR_SIZE
+
+  div   bx
+
+  cmp   cx, ax
+  jbe   .3
+
+  mov   cx, ax
+
+.3:
+  pop   bx
+  pop   dx
+  pop   ax
 
   push  cx                    ; salva para depois  (Q)
 
@@ -60,24 +96,21 @@ ReadCHS:
   mov   dh, ah
   mov   dl, [si + DiskInfoStruct.DriveNumber]
 
-  pop   ax                    ; Q
+  pop   ax                    ; Q (<128)
 
-  cmp   ax, 128
-  jbe   .1
-
-  mov   al, 128
-
-.1:
   mov   ah, 0x02              ; funcao da BIOS
 
-.2:
-  push  ax
+.4:
+  push  ax                    ; Salva para usar depois do reset
 
   int   0x13
 
-  test  al, al
-  jnz   .3
+  jc    .5
 
+  test  al, al
+  jnz   .6
+
+.5:
   ; Verifica quantidade de erros
   inc   byte [si + DiskInfoStruct.ErrorCount]
   cmp   byte [si + DiskInfoStruct.ErrorCount], MAXREADERROR
@@ -88,9 +121,9 @@ ReadCHS:
   jc    .error
 
   pop   ax
-  jmp   .2
+  jmp   .4
 
-.3:
+.6:
   pop   cx                    ; descarta pilha
   xor   ah, ah                ; AL retorna setores lidos
 ret

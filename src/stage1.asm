@@ -604,9 +604,6 @@ Main_High:
   mov   bx, STAGE2_BASE       ; ES = 0
   ; FS:0 = FAT carregada
 
-
-
-
   call  LoadFile
 
   ; Verifica informações do Stage 2
@@ -615,9 +612,12 @@ Main_High:
 
 
 
-  mov   di, STAGE2_BASE
 
-  mov   ax, [es:di]
+
+
+
+
+  mov   ax, [es:bx]
   call  WriteWordHex
 
   jmp Abort
