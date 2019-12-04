@@ -35,7 +35,7 @@
 ; Executar: Este arquivo deve ser instalado em um lugar especifico do disco.
 ;===============================================================================
 
-
+[MAP ALL stage1.map]
 
 ;===============================================================================
 ;
@@ -230,7 +230,7 @@ jmp Main_386
   %include "initdiskinfo-inc.asm"
   %include "readlba2-inc.asm"
   %include "lba2chs-inc.asm"
-  %include "readchs-inc.asm"
+  %include "readchs2-inc.asm"
   %include "resetdisk-inc.asm"
   %include "printcputype-inc.asm"
 
@@ -604,11 +604,26 @@ Main_High:
   mov   bx, STAGE2_BASE       ; ES = 0
   ; FS:0 = FAT carregada
 
+
+
+
   call  LoadFile
 
   ; Verifica informações do Stage 2
-;  mov   eax, [es:bx]
-;  call  WriteWordHex
+
+
+
+
+
+  mov   di, STAGE2_BASE
+
+  mov   ax, [es:di]
+  call  WriteWordHex
+
+  jmp Abort
+
+
+
 
 
 

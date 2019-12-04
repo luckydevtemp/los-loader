@@ -70,20 +70,6 @@ ReadLBA:
 
 
 
-  test  byte [Trap], 1
-  jz    .notrap
-
-  mov   ax, bx
-  call  WriteWordHex
-
-
-  jmp   Abort
-
-.notrap:
-
-
-
-
 
 
 
